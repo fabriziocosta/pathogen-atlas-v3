@@ -57,7 +57,7 @@ decisions:
   backoff_seconds: 1.0
   max_workers: 1024
   max_calls: null
-  pathogen_question_version: human-disease-attribution-v3.1
+  pathogen_question_version: human-disease-attribution-v3.2
   feature_question_set_version: multi-domain-features-v3.2
   pathogen_threshold: 0.75
   feature_yes_threshold: 0.75

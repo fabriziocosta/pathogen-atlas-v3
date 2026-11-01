@@ -1,37 +1,40 @@
 id: human_pathogen_evidence
-version: human-disease-attribution-v3.1
+version: human-disease-attribution-v3.2
 answer_type: noul
 domains:
   bacteria:
     instructions: >-
       Based only on the supplied title and abstract, assess whether the named
-      bacterial species caused or materially contributed to infection or disease
-      in a human. A positive result requires disease attribution to this species,
-      not merely isolation, colonisation, carriage without disease, environmental
+      bacterial species caused or materially contributed to disease in a human.
+      Infection or detection without an attributed disease outcome is not enough.
+      A positive result requires disease attribution to this species, not merely
+      isolation, colonisation, carriage without disease, environmental
       detection, or an incidental mention. Animal-only and in-vitro-only findings
       are negative. Do not use outside knowledge.
     criteria:
-      'true': The abstract directly attributes human infection or disease to the named bacterial species.
-      'false': The abstract gives no such human disease attribution, describes only colonisation/carriage, or would require outside knowledge.
+      'true': The abstract directly attributes a human disease outcome to the named bacterial species.
+      'false': The abstract gives no such human disease attribution, describes infection/detection without disease or only colonisation/carriage, or would require outside knowledge.
   fungi:
     instructions: >-
       Based only on the supplied title and abstract, assess whether the named
-      fungal species caused or materially contributed to infection or disease in
-      a human. A positive result requires disease attribution to this fungus, not
+      fungal species caused or materially contributed to disease in a human.
+      Infection or detection without an attributed disease outcome is not enough.
+      A positive result requires disease attribution to this fungus, not
       merely colonisation, environmental contamination, allergy without infection,
       mycotoxin illness without fungal infection, or an incidental culture. Animal-only
       and in-vitro-only findings are negative. Do not use outside knowledge.
     criteria:
-      'true': The abstract directly attributes human infection or disease to the named fungal species.
-      'false': The abstract gives no such human disease attribution, reports only carriage/contamination, or would require outside knowledge.
+      'true': The abstract directly attributes a human disease outcome to the named fungal species.
+      'false': The abstract gives no such human disease attribution, describes infection/detection without disease or only carriage/contamination, or would require outside knowledge.
   viruses:
     instructions: >-
       Based only on the supplied title and abstract, assess whether the named
-      virus species caused or materially contributed to active infection or disease
-      in a human. Exposure, seropositivity without active disease, environmental
-      detection, phage-only findings, and incidental mentions are negative. Preserve
-      distinctions between a species and its strain, subtype, or variant. Do not
-      use outside knowledge.
+      virus species caused or materially contributed to a human disease. Active
+      infection, viral detection, or replication without an attributed disease
+      outcome is not enough. Exposure or seropositivity alone, asymptomatic
+      infection without an attributed disease, environmental detection, phage-only
+      findings, and incidental mentions are negative. Preserve distinctions between
+      a species and its strain, subtype, or variant. Do not use outside knowledge.
     criteria:
-      'true': The abstract directly attributes active human infection or disease to the named virus species.
-      'false': The abstract gives no such active human disease attribution, describes only exposure or detection, or would require outside knowledge.
+      'true': The abstract directly attributes a human disease outcome to the named virus species.
+      'false': The abstract gives no such human disease attribution, describes infection/detection without disease or only exposure, or would require outside knowledge.
