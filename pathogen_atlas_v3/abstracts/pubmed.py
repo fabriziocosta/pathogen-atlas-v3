@@ -91,17 +91,23 @@ def filter_pubmed_search_aliases(
     *,
     excluded_ambiguous_aliases: list[str] | tuple[str, ...] = (),
 ) -> tuple[pd.DataFrame, dict[str, int]]:
-    """Remove isolate designations and configured ambiguous VMR terms from search aliases.
+    """Filter aliases that are ambiguous as species-level PubMed search terms.
 
     VMR isolate designations identify particular isolates (and can be generic
     words such as ``Common`` or ``Type``), rather than taxonomic names. Some
     abbreviation fields also contain ambiguous terms such as ``Gamma`` or
-    ``CD4``. Keep all such values in taxonomy provenance, but omit them from
-    PubMed species searches. Reading source records lets the same filter
-    protect existing Phase 1 releases.
+    ``CD4``. Species Fungorum can map one synonym to multiple fungal taxa. Keep
+    these values in taxonomy provenance, but omit ambiguous terms from PubMed
+    species searches. Reading source records also lets this protect existing
+    Phase 1 releases.
     """
-    if aliases.empty or "source_record_json" not in aliases.columns or "name" not in aliases.columns:
-        return aliases.copy(), {"ictv_isolate_designations": 0, "configured_ambiguous_aliases": 0}
+    empty_counts = {
+        "ictv_isolate_designations": 0,
+        "configured_ambiguous_aliases": 0,
+        "fungal_taxonomy_ambiguities": 0,
+    }
+    if aliases.empty or "name" not in aliases.columns:
+        return aliases.copy(), empty_counts
 
     def normalize(value: Any) -> str:
         if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -113,46 +119,88 @@ def filter_pubmed_search_aliases(
             pass
         return " ".join(str(value).split()).casefold()
 
+    source_values = aliases.get("source", pd.Series("", index=aliases.index)).map(normalize)
+    alias_names = aliases["name"].map(normalize)
+    fungal_source = source_values.eq("species_fungorum")
+    fungal_ids = aliases.get("organism_id", pd.Series(None, index=aliases.index))
+    fungal_name_map = pd.DataFrame({
+        "name": alias_names.loc[fungal_source & fungal_ids.notna()],
+        "organism_id": fungal_ids.loc[fungal_source & fungal_ids.notna()].astype(str),
+    })
+    if fungal_name_map.empty:
+        ambiguous_fungal_names: set[str] = set()
+    else:
+        distinct_taxa = fungal_name_map.groupby("name")["organism_id"].nunique()
+        ambiguous_fungal_names = set(distinct_taxa.loc[distinct_taxa.gt(1)].index)
     exclude_designation = []
     exclude_ambiguous = []
+    exclude_fungal_taxonomy_ambiguity = []
     ambiguous_terms = {normalize(value) for value in excluded_ambiguous_aliases if normalize(value)}
-    for row in aliases.itertuples(index=False):
-        source = normalize(getattr(row, "source", ""))
+    for index, row in enumerate(aliases.itertuples(index=False)):
+        source = source_values.iloc[index]
+        alias_name = alias_names.iloc[index]
         if source != "ictv_vmr":
             exclude_designation.append(False)
             exclude_ambiguous.append(False)
-            continue
-        payload = getattr(row, "source_record_json", None)
-        try:
-            record = json.loads(payload) if isinstance(payload, str) else payload
-        except (TypeError, ValueError):
-            record = None
-        designations: set[str] = set()
-        if isinstance(record, dict):
-            designation_value = next(
-                (value for key, value in record.items()
-                 if normalize(key) in {"virus isolate designation", "isolate designation"}),
-                "",
-            )
-            # ICTV VMR cells can contain lists such as "prototype; p". The
-            # adapter emits each component as its own alias, so compare against
-            # each normalized value as well as the unsplit cell.
-            designation_text = normalize(designation_value)
-            if designation_text:
-                designations.add(designation_text)
-                designations.update(
-                    part for part in re.split(r"\s*[;|,]\s*", designation_text) if part
+        else:
+            payload = getattr(row, "source_record_json", None) if "source_record_json" in aliases.columns else None
+            try:
+                record = json.loads(payload) if isinstance(payload, str) else payload
+            except (TypeError, ValueError):
+                record = None
+            designations: set[str] = set()
+            if isinstance(record, dict):
+                designation_value = next(
+                    (value for key, value in record.items()
+                     if normalize(key) in {"virus isolate designation", "isolate designation"}),
+                    "",
                 )
-        alias_name = normalize(getattr(row, "name", ""))
-        exclude_designation.append(bool(alias_name and alias_name in designations))
-        exclude_ambiguous.append(bool(alias_name and alias_name in ambiguous_terms))
+                # ICTV VMR cells can contain lists such as "prototype; p".
+                designation_text = normalize(designation_value)
+                if designation_text:
+                    designations.add(designation_text)
+                    designations.update(
+                        part for part in re.split(r"\s*[;|,]\s*", designation_text) if part
+                    )
+            exclude_designation.append(bool(alias_name and alias_name in designations))
+            exclude_ambiguous.append(bool(alias_name and alias_name in ambiguous_terms))
+        exclude_fungal_taxonomy_ambiguity.append(
+            bool(
+                source == "species_fungorum"
+                and pd.notna(fungal_ids.iloc[index])
+                and alias_name
+                and alias_name in ambiguous_fungal_names
+            )
+        )
     designation_mask = pd.Series(exclude_designation, index=aliases.index, dtype=bool)
     ambiguous_mask = pd.Series(exclude_ambiguous, index=aliases.index, dtype=bool) & ~designation_mask
-    mask = designation_mask | ambiguous_mask
+    fungal_ambiguity_mask = pd.Series(exclude_fungal_taxonomy_ambiguity, index=aliases.index, dtype=bool)
+    mask = designation_mask | ambiguous_mask | fungal_ambiguity_mask
     return aliases.loc[~mask].copy(), {
         "ictv_isolate_designations": int(designation_mask.sum()),
         "configured_ambiguous_aliases": int(ambiguous_mask.sum()),
+        "fungal_taxonomy_ambiguities": int(fungal_ambiguity_mask.sum()),
     }
+
+
+def ambiguous_fungal_accepted_names(species: pd.DataFrame) -> set[str]:
+    """Return fungal accepted names flagged or observed as ambiguous across taxon IDs."""
+    if "accepted_name" not in species.columns:
+        return set()
+    fungi = species.loc[species.get("organism_group", pd.Series("", index=species.index)).astype(str).eq("fungi")].copy()
+    if fungi.empty:
+        return set()
+    normalized = fungi["accepted_name"].fillna("").astype(str).map(lambda value: " ".join(value.split()).casefold())
+    ambiguous = set()
+    if "mapping_status" in fungi.columns:
+        flagged = fungi["mapping_status"].fillna("").astype(str).eq("ambiguous_accepted_name")
+        ambiguous.update(normalized.loc[flagged & normalized.ne("")])
+    if "organism_id" in fungi.columns:
+        name_taxa = pd.DataFrame({"name": normalized, "organism_id": fungi["organism_id"]})
+        name_taxa = name_taxa.loc[name_taxa["name"].ne("") & name_taxa["organism_id"].notna()]
+        distinct_taxa = name_taxa.groupby("name")["organism_id"].nunique()
+        ambiguous.update(distinct_taxa.loc[distinct_taxa.gt(1)].index)
+    return ambiguous
 
 
 def _thread_session() -> requests.Session:
@@ -565,14 +613,20 @@ def acquire_pubmed(
         aliases, excluded_ambiguous_aliases=excluded_ambiguous_aliases,
     )
     aliases_by_id = searchable_aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not searchable_aliases.empty else {}
+    ambiguous_names = ambiguous_fungal_accepted_names(species)
     tasks = []
     active_query_ids: set[str] = set()
+    species_without_searchable_names = 0
     for row in species[["organism_id", "organism_group", "accepted_name"]].drop_duplicates("organism_id").itertuples(index=False):
         raw_names = list(aliases_by_id.get(row.organism_id, []))
         names = [name for name in raw_names if len(" ".join(str(name).split())) >= 3 and not re.fullmatch(r"\d+(?:\.\d+)?", " ".join(str(name).split()))]
         excluded_alias_count = len(raw_names) - len(names)
-        if row.accepted_name not in names:
+        accepted_name = " ".join(str(row.accepted_name).split())
+        if accepted_name.casefold() not in ambiguous_names and row.accepted_name not in names:
             names.insert(0, row.accepted_name)
+        if not names:
+            species_without_searchable_names += 1
+            continue
         query = build_name_query(names)
         digest = hashlib.sha256(f"{query}\nretmax={retmax}".encode()).hexdigest()
         query_id = f"q_{digest[:20]}"
@@ -593,7 +647,7 @@ def acquire_pubmed(
     if max_calls is not None:
         tasks = tasks[:int(max_calls)]
     if log:
-        print(f"PubMed search: {len(species):,} species rows; excluded aliases: {excluded_alias_counts['ictv_isolate_designations']:,} ICTV designations, {excluded_alias_counts['configured_ambiguous_aliases']:,} configured ambiguous terms; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
+        print(f"PubMed search: {len(species):,} species rows; excluded aliases: {excluded_alias_counts['ictv_isolate_designations']:,} ICTV designations, {excluded_alias_counts['configured_ambiguous_aliases']:,} configured terms, {excluded_alias_counts['fungal_taxonomy_ambiguities']:,} ambiguous fungal mappings; {species_without_searchable_names:,} taxa without searchable names; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
     limiter = RateLimiter(request_delay_seconds)
     def search(task: tuple[Any, ...]) -> dict[str, Any]:
         row, names, query, digest, query_id, excluded_alias_count = task
@@ -711,9 +765,11 @@ def acquire_pubmed(
         "search_incomplete_pmid_count": sum(int(item.get("search_incomplete_count", 0)) for item in active_queries),
         "overflow_expanded_query_count": sum(bool(item.get("overflow_expanded")) for item in active_queries),
         "query_summary_by_group": active_group_summaries,
+        "excluded_pubmed_aliases": excluded_alias_counts,
         "species_abstract_matches": len(match_frame),
         "sampled_species_pmid_matches": int(match_frame["selected_for_sampling"].sum()) if not match_frame.empty else 0,
         "sample_cap_per_species": max_pmids_per_species,
+        "species_without_searchable_names": species_without_searchable_names,
         "oldest_pmids_per_species": int(oldest_pmids_per_species),
         "pmid_sample_random_seed": int(pmid_sample_random_seed),
         "abstract_count": len(abstracts_frame),

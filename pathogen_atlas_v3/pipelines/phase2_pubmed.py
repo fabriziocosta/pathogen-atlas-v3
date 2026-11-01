@@ -10,7 +10,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from pathogen_atlas_v3.abstracts.pubmed import acquire_pubmed, build_name_query, filter_pubmed_search_aliases
+from pathogen_atlas_v3.abstracts.pubmed import (
+    acquire_pubmed,
+    ambiguous_fungal_accepted_names,
+    build_name_query,
+    filter_pubmed_search_aliases,
+)
 from pathogen_atlas_v3.common.config import selected_organism_groups
 from pathogen_atlas_v3.common.io import atomic_parquet, load_yaml
 
@@ -35,6 +40,7 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
         aliases, excluded_ambiguous_aliases=settings.get("exclude_ambiguous_aliases", []),
     )
     alias_map = searchable_aliases.groupby("organism_id")["name"].apply(lambda values: list(dict.fromkeys(map(str, values.dropna())))).to_dict() if not searchable_aliases.empty else {}
+    ambiguous_fungal_names = ambiguous_fungal_accepted_names(species)
     per_group = []
     root = Path(config["paths"].get("pubmed_domain_root", Path(config["paths"]["pubmed_release"]).parent / "domains"))
     for group in groups:
@@ -59,11 +65,16 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
                 except ValueError:
                     continue
         pending = 0
+        species_without_searchable_names = 0
         for row in group_species[["organism_id", "accepted_name"]].drop_duplicates("organism_id").itertuples(index=False):
             raw_names = alias_map.get(row.organism_id, [])
             names = [name for name in raw_names if len(" ".join(str(name).split())) >= 3 and not re.fullmatch(r"\d+(?:\.\d+)?", " ".join(str(name).split()))]
-            if row.accepted_name not in names:
+            accepted_name = " ".join(str(row.accepted_name).split())
+            if accepted_name.casefold() not in ambiguous_fungal_names and row.accepted_name not in names:
                 names.insert(0, row.accepted_name)
+            if not names:
+                species_without_searchable_names += 1
+                continue
             query = build_name_query(names)
             digest = hashlib.sha256(f"{query}\nretmax={retmax}".encode()).hexdigest()
             if f"q_{digest[:20]}" not in cached:
@@ -73,6 +84,7 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
             "species": len(group_species),
             "cached_queries": len(cached),
             "pending_queries": pending,
+            "species_without_searchable_names": species_without_searchable_names,
             "incomplete_cached_queries": incomplete_cached,
             "cached_overflow_segments": cached_overflow_segments,
             "cache_path": str(cache_path),
