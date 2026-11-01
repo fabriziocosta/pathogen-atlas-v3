@@ -44,7 +44,7 @@
           <div class="field"><label for="color">Color points by</label><select id="color"></select></div>
         </div>
         <details class="color-settings"><summary>Color settings</summary><div class="appearance-menu">
-          <div class="field"><label for="cmap">Feature colormap</label><select id="cmap"><option>Inferno</option><option>Viridis</option><option>Magma</option><option>Plasma</option><option>Cividis</option><option>Turbo</option><option>Blues</option><option>YlGnBu</option></select></div>
+          <div class="field"><label for="cmap">Feature colormap</label><select id="cmap"><option>Inferno</option><option>Viridis</option><option>Cividis</option><option>Plasma</option><option>Magma</option><option>Turbo</option><option>RdBu</option><option>RdYlBu</option><option>YlGnBu</option><option>Blues</option></select></div>
           <label class="settings-toggle"><input id="reverse" type="checkbox" checked> Reverse colormap</label>
           <label class="settings-toggle"><input id="black-edge" type="checkbox" checked> Black circle edges</label>
           <label class="settings-toggle"><input id="size-index" type="checkbox" checked> Size by Pathogenic Interest Index</label>
@@ -75,17 +75,55 @@ async function init(){try{const [r,catalogResponse]=await Promise.all([fetch('ex
 function matchingSpecies(){const g=document.getElementById('group').value,q=document.getElementById('search').value.trim().toLowerCase(),min=Number(document.getElementById('minimum').value||0);return DATA.species.filter(s=>(g==='all'||s.organism_group===g)&&(!q||(s.accepted_name||'').toLowerCase().includes(q)||(s.taxonomy_path||'').toLowerCase().includes(q)||(s.synonyms||[]).some(n=>String(n).toLowerCase().includes(q)))&&Number(s.n_jev_accepted_pmids||0)>=min)}
 function visible(){return matchingSpecies().filter(s=>Number.isFinite(Number(s.x))&&Number.isFinite(Number(s.y)))}
 function renderCatalog(){const rows=matchingSpecies();const map=document.getElementById('map');map.classList.add('catalog-mode');const groupNames=(DATA.groups||[]).join(' and ');const note=DATA.coordinates_ready&&document.getElementById('group').value==='all'?`Select an organism group to view its feature space. ${groupNames} use separate embeddings, so their coordinates are shown separately.`:'Profiles include human pathogens with accepted evidence and show supporting PubMed PMIDs, article titles, and Jev confidence.';map.innerHTML=`<div class="catalog"><div class="catalog-note"><b>Human pathogen catalog.</b> ${note}</div><p class="catalog-count">Showing ${fmt(Math.min(rows.length,100))} of ${fmt(rows.length)} matching human pathogens${rows.length>100?' (refine your search to narrow the list)':''}.</p><div class="catalog-results">${rows.slice(0,100).map((s,i)=>`<button class="catalog-item" data-index="${i}">${s.accepted_name}<span>${s.organism_group} · ${s.taxonomy_source||'taxonomy'}</span></button>`).join('')||'<div class="empty">No pathogens match these filters.</div>'}</div></div>`;map.querySelectorAll('.catalog-item').forEach(button=>button.onclick=()=>showProfile(rows[Number(button.dataset.index)]))}
-function render(){if(!DATA)return;const selectedGroup=document.getElementById('group').value;if(!DATA.coordinates_ready||selectedGroup==='all'){document.getElementById('mapnote').textContent=DATA.coordinates_ready?'Select a group to view its feature space':'Human pathogen catalog';renderCatalog();return}document.getElementById('mapnote').textContent=selectedGroup==='bacteria'?'V2 bacterial pathogen feature space':'V3 virus pathogen feature space';document.getElementById('map').classList.remove('catalog-mode');const rows=visible();if(!rows.length){document.getElementById('map').innerHTML='<div class="empty">No fitted coordinates match the filters.</div>';return}
- const key=document.getElementById('color').value, vals=rows.map(s=>key==='pathogenic_interest_index'?s.pathogenic_interest_index:key.startsWith('taxonomy:')?(s.taxonomy||{})[key.split(':')[1]]:(s.feature_values||{})[key]);
- let colors=vals,tickvals=null,ticktext=null;if(key.startsWith('taxonomy:')){const categories=[...new Set(vals.filter(v=>v!=null))];colors=vals.map(v=>v==null?null:categories.indexOf(v));tickvals=categories.map((_,i)=>i);ticktext=categories}
- const sizeByIndex=document.getElementById('size-index').checked, black=document.getElementById('black-edge').checked, numericColor=!key.startsWith('taxonomy:');
- const definition=DATA.features[key]?.definition||'';document.getElementById('color-description').innerHTML=definition?`<b>Color: ${DATA.features[key].label}: ${definition}</b><br><span class="small">Color intensity shows the share of scored abstracts answered yes. Zero values and unscored points use translucent gray.</span>`:'';
+const v2Palette=['#2166ac','#e08214','#1b9e77','#7570b3','#d95f02','#66a61e','#e7298a','#1f9e89','#a6761d','#386cb0','#f0027f','#7fc97f','#beaed4','#fdc086','#ffff99','#bf5b17','#80b1d3','#fb8072','#8dd3c7','#bebada'];
+const v2ExtraColorScales={
+ Inferno:[[0,'#000004'],[.1111,'#1b0c41'],[.2222,'#4a0c6b'],[.3333,'#781c6d'],[.4444,'#a52c60'],[.5556,'#cf4446'],[.6667,'#ed6925'],[.7778,'#fb9b06'],[.8889,'#f7d13d'],[1,'#fcffa4']],
+ Magma:[[0,'#000004'],[.1111,'#180f3d'],[.2222,'#440f76'],[.3333,'#721f81'],[.4444,'#9e2f7f'],[.5556,'#cd4071'],[.6667,'#f1605d'],[.7778,'#fd9668'],[.8889,'#feca8d'],[1,'#fcfdbf']],
+ Plasma:[[0,'#0d0887'],[.1111,'#46039f'],[.2222,'#7201a8'],[.3333,'#9c179e'],[.4444,'#bd3786'],[.5556,'#d8576b'],[.6667,'#ed7953'],[.7778,'#fb9f3a'],[.8889,'#fdca26'],[1,'#f0f921']],
+ Turbo:[[0,'#30123b'],[.0714,'#4145ab'],[.1429,'#4675ed'],[.2143,'#39a2fc'],[.2857,'#1bcfd4'],[.3571,'#24eca6'],[.4286,'#61fc6c'],[.5,'#a4fc3b'],[.5714,'#d1e834'],[.6429,'#f3c63a'],[.7143,'#fe9b2d'],[.7857,'#f36315'],[.8571,'#d93806'],[.9286,'#b11901'],[1,'#7a0402']],
+ RdYlBu:[[0,'rgb(165,0,38)'],[.1,'rgb(215,48,39)'],[.2,'rgb(244,109,67)'],[.3,'rgb(253,174,97)'],[.4,'rgb(254,224,144)'],[.5,'rgb(255,255,191)'],[.6,'rgb(224,243,248)'],[.7,'rgb(171,217,233)'],[.8,'rgb(116,173,209)'],[.9,'rgb(69,117,180)'],[1,'rgb(49,54,149)']]
+};
+function render(){
+ if(!DATA)return;
+ const selectedGroup=document.getElementById('group').value;
+ if(!DATA.coordinates_ready||selectedGroup==='all'){document.getElementById('mapnote').textContent=DATA.coordinates_ready?'Select a group to view its feature space':'Human pathogen catalog';renderCatalog();return}
+ const bacteriaParity=selectedGroup==='bacteria';
+ document.getElementById('mapnote').textContent=bacteriaParity?'V2 bacterial pathogen feature space':'V3 virus pathogen feature space';
+ document.getElementById('map').classList.remove('catalog-mode');
+ const rows=visible();
+ if(!rows.length){document.getElementById('map').innerHTML='<div class="empty">No fitted coordinates match the filters.</div>';return}
+ const key=document.getElementById('color').value;
+ const vals=rows.map(s=>key==='pathogenic_interest_index'?s.pathogenic_interest_index:key.startsWith('taxonomy:')?(s.taxonomy||{})[key.split(':')[1]]:(s.feature_values||{})[key]);
+ const taxonomyColor=key.startsWith('taxonomy:');
+ const sizeByIndex=document.getElementById('size-index').checked, black=document.getElementById('black-edge').checked;
+ const definition=DATA.features[key]?.definition||'';
+ document.getElementById('color-description').innerHTML=definition?`<b>Color: ${DATA.features[key].label}: ${definition}</b><br><span class="small">Color intensity shows the share of scored abstracts answered yes. Zero values and unscored points use translucent gray.</span>`:'';
  const cmap=document.getElementById('cmap').value,reverse=document.getElementById('reverse').checked;
- const makeTrace=(source,sourceColors,gray=false)=>({type:'scatter',mode:'markers',x:source.map(s=>s.x),y:source.map(s=>s.y),customdata:source.map(s=>[s.organism_id,s.organism_group,s.n_pathogen_pmids,s.n_pubmed_search_records]),text:source.map(s=>s.accepted_name),hovertemplate:'<b>%{text}</b><br>%{customdata[1]}<br>Supporting PMIDs: %{customdata[2]}<br>PubMed search records: %{customdata[3]}<extra></extra>',marker:{size:source.map(s=>sizeByIndex?Math.max(7,Math.min(30,8+22*Math.sqrt(Number(s.pathogenic_interest_index||0)))):12),color:gray?'rgba(105,120,135,0.30)':sourceColors,colorscale:cmap,reversescale:reverse,cmin:0,cmax:1,opacity:gray ? 0.65 : 0.92,line:{color:black?'black':'white',width:.8},showscale:!gray,colorbar:{title:key==='pathogenic_interest_index'?'Pathogenic Interest Index':(key.startsWith('taxonomy:')?key.split(':')[1]:(DATA.features[key]||{}).label),tickvals,ticktext}}});
+ const makeTrace=(source,sourceColors,{gray=false,categoryValues=null,opacity=null}={})=>{
+  const markerSizing=bacteriaParity?(sizeByIndex?{size:source.map(s=>Math.max(0,Number(s.pathogenic_interest_index)||0)),sizemode:'area',sizeref:1/(24*24),sizemin:4}:{size:8}):{size:source.map(s=>sizeByIndex?Math.max(7,Math.min(30,8+22*Math.sqrt(Number(s.pathogenic_interest_index||0)))):12)};
+  const marker={...markerSizing,color:gray?(bacteriaParity?'#aeb9c7':'rgba(105,120,135,0.30)'):sourceColors,opacity:opacity??(gray?(bacteriaParity?.16:.65):bacteriaParity?.84:.92),line:{color:black?(bacteriaParity?'#111827':'black'):'#ffffff',width:bacteriaParity?.45:.8}};
+  if(!gray&&!categoryValues){marker.colorscale=bacteriaParity?(v2ExtraColorScales[cmap]||cmap):cmap;marker.reversescale=reverse;marker.cmin=0;marker.cmax=1;marker.showscale=true;marker.colorbar=bacteriaParity?{x:1.07,thickness:13,len:.72,tickformat:taxonomyColor?'':'.0%'}:{title:key==='pathogenic_interest_index'?'Pathogenic Interest Index':(taxonomyColor?key.split(':')[1]:(DATA.features[key]||{}).label),tickvals:null,ticktext:null}}
+  if(categoryValues){marker.showscale=false}
+  return {type:bacteriaParity?'scattergl':'scatter',mode:'markers',x:source.map(s=>s.x),y:source.map(s=>s.y),customdata:source.map(s=>[s.organism_id,s.organism_group,s.n_pathogen_pmids,s.n_pubmed_search_records]),text:source.map(s=>s.accepted_name),hovertemplate:'<b>%{text}</b><br>%{customdata[1]}<br>Supporting PMIDs: %{customdata[2]}<br>PubMed search records: %{customdata[3]}<extra></extra>',marker,showlegend:false};
+ };
  let traces;
- if(numericColor){const positiveRows=[],positiveColors=[],grayRows=[];rows.forEach((s,i)=>{if(typeof vals[i]==='number'&&vals[i]>0){positiveRows.push(s);positiveColors.push(vals[i])}else grayRows.push(s)});traces=[];if(positiveRows.length)traces.push(makeTrace(positiveRows,positiveColors));if(grayRows.length)traces.push(makeTrace(grayRows,[],true))}
- else traces=[makeTrace(rows,colors)];
- Plotly.react('map',traces,{margin:{l:42,r:20,t:20,b:42},paper_bgcolor:'white',plot_bgcolor:'white',xaxis:{title:'Feature space 1',showgrid:true,gridcolor:'#e8eef2'},yaxis:{title:'Feature space 2',showgrid:true,gridcolor:'#e8eef2'},hoverlabel:{namelength:0}},{responsive:true,displaylogo:false});
+ if(taxonomyColor&&bacteriaParity){
+  const categories=[...new Set(vals.filter(v=>v!=null))].sort((a,b)=>String(a).localeCompare(String(b)));
+  traces=categories.map((category,i)=>{const subset=rows.filter((_,j)=>vals[j]===category);const trace=makeTrace(subset,null,{categoryValues:true});trace.name=category;trace.showlegend=categories.length<=12;trace.marker.color=v2Palette[i%v2Palette.length];trace.marker.opacity=.84;return trace});
+  const missing=rows.filter((_,i)=>vals[i]==null);if(missing.length)traces.push(makeTrace(missing,null,{gray:true}));
+ } else if(taxonomyColor){
+  const categories=[...new Set(vals.filter(v=>v!=null))];const colors=vals.map(v=>v==null?null:categories.indexOf(v));
+  traces=[makeTrace(rows,colors)];const tr=traces[0];tr.marker.colorscale=cmap;tr.marker.cmin=0;tr.marker.cmax=Math.max(1,categories.length-1);tr.marker.colorbar={tickvals:categories.map((_,i)=>i),ticktext:categories};
+ } else {
+  const coloredRows=[],coloredValues=[],zeroRows=[],missingRows=[];
+  rows.forEach((s,i)=>{if(vals[i]==null)missingRows.push(s);else if(Number(vals[i])===0)zeroRows.push(s);else{coloredRows.push(s);coloredValues.push(Number(vals[i]))}});
+  traces=[];if(coloredRows.length)traces.push(makeTrace(coloredRows,coloredValues));
+  if(zeroRows.length)traces.push(makeTrace(zeroRows,null,{gray:true}));
+  if(missingRows.length)traces.push(makeTrace(missingRows,null,{gray:true}));
+ }
+ if(bacteriaParity&&selected&&rows.some(s=>s.organism_id===selected.organism_id)){traces.push({type:'scattergl',mode:'markers',x:[selected.x],y:[selected.y],customdata:[[selected.organism_id]],hoverinfo:'skip',showlegend:false,marker:{symbol:'circle-open',size:17,color:'#d84a36',line:{width:2.5}}})}
+ const layout=bacteriaParity?{margin:{l:58,r:112,t:22,b:50},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif',color:'#29425f',size:11},xaxis:{title:'IMSTE 1',zeroline:false,gridcolor:'#edf1f6'},yaxis:{title:'IMSTE 2',zeroline:false,gridcolor:'#edf1f6',scaleanchor:'x',scaleratio:1},hovermode:'closest',uirevision:'pathogen-atlas-feature-space',showlegend:taxonomyColor&&[...new Set(vals.filter(v=>v!=null))].length<=12,legend:{orientation:'h',y:-.15,x:0,font:{size:10}}}:{margin:{l:42,r:20,t:20,b:42},paper_bgcolor:'white',plot_bgcolor:'white',xaxis:{title:'Feature space 1',showgrid:true,gridcolor:'#e8eef2'},yaxis:{title:'Feature space 2',showgrid:true,gridcolor:'#e8eef2'},hoverlabel:{namelength:0}};
+ Plotly.react('map',traces,layout,{responsive:true,displaylogo:false});
  document.getElementById('map').on('plotly_click',ev=>{const oid=ev.points[0].customdata[0];const species=DATA.species.find(s=>s.organism_id===oid);if(species)showProfile(species)});
 }
 async function showProfile(s){selected=s; const el=document.getElementById('profile'); const taxonomy=(s.taxonomy_path||'').split(';').filter(Boolean).map(x=>{const a=x.split('=');return `<div><span>${a[0]}</span><strong>${a.slice(1).join('=')}</strong></div>`}).join('');
