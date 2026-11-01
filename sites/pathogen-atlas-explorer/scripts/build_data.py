@@ -36,11 +36,25 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     release = ROOT / paths["release_root"]
     taxonomy = ROOT / paths["taxonomy_release"]
     species_path = release / "species_summary.parquet"
+    index_path = release / "pathogenic_interest_index.parquet"
     feature_path = release / "feature_summary.parquet"
     coordinate_path = ROOT / paths["embedding_root"] / "coordinates.parquet"
     if not species_path.exists():
         raise FileNotFoundError("Run Phase 4 before building Explorer data.")
     species = pd.read_parquet(species_path)
+    index = pd.read_parquet(index_path) if index_path.exists() else pd.DataFrame()
+    if not index.empty:
+        index_columns = [column for column in (
+            "organism_id", "organism_group", "n_pathogen_pmids", "n_abstracts_fetched",
+            "n_pubmed_search_records", "estimated_pathogen_pmids",
+            "log_estimated_pathogen_pmids", "pathogenic_interest_index", "index_version",
+        ) if column in index.columns]
+        index_by_id = {
+            str(row["organism_id"]): {key: _safe_json(value) for key, value in row.items() if key != "organism_id"}
+            for row in index[index_columns].to_dict("records")
+        }
+    else:
+        index_by_id = {}
     features = pd.read_parquet(feature_path) if feature_path.exists() else pd.DataFrame()
     coords = pd.read_parquet(coordinate_path) if coordinate_path.exists() else pd.DataFrame()
     v2_release_root = ROOT / "data/migration/version2_snapshot/04_tables/release"
@@ -49,17 +63,23 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     v2_evidence_path = v2_release_root / "evidence_records.parquet"
     v2_feature_matrix_path = v2_release_root / "species_feature_matrix.parquet"
     v2_answers_path = v2_release_root / "domain_expert_answers.parquet"
+    v2_coordinates_path = ROOT / "data/migration/version2_snapshot/05_plots/release/species_feature_space_coordinates.parquet"
     v2_species = pd.read_parquet(v2_species_path) if v2_species_path.exists() else pd.DataFrame()
     v2_index = pd.read_parquet(v2_index_path) if v2_index_path.exists() else pd.DataFrame()
     v2_evidence = pd.read_parquet(v2_evidence_path) if v2_evidence_path.exists() else pd.DataFrame()
     v2_feature_matrix = pd.read_parquet(v2_feature_matrix_path) if v2_feature_matrix_path.exists() else pd.DataFrame()
     v2_answers = pd.read_parquet(v2_answers_path) if v2_answers_path.exists() else pd.DataFrame()
+    v2_coordinates = pd.read_parquet(v2_coordinates_path) if v2_coordinates_path.exists() else pd.DataFrame()
     if not v2_species.empty and not v2_index.empty:
         v2_species = v2_species.merge(v2_index[["canonical_species", "pathogenic_index"]], on="canonical_species", how="left")
     v2_summary_by_name = {
         str(row.canonical_species).casefold(): row._asdict()
         for row in v2_species.itertuples(index=False)
     } if not v2_species.empty else {}
+    bacteria_organism_by_name = {
+        str(row.accepted_name).casefold(): str(row.organism_id)
+        for row in species.loc[species["organism_group"].eq("bacteria")].itertuples(index=False)
+    }
     v2_features_by_name = {}
     if not v2_feature_matrix.empty:
         feature_columns = [column for column in v2_feature_matrix.columns if column.startswith("feature_")]
@@ -79,6 +99,13 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         species = species.merge(coords, on="organism_id", how="left")
     else:
         species["x"], species["y"] = None, None
+    if not v2_coordinates.empty:
+        v2_coordinates["organism_id"] = v2_coordinates["canonical_species"].astype(str).str.casefold().map(bacteria_organism_by_name)
+        v2_coordinates = v2_coordinates.loc[v2_coordinates["organism_id"].notna()].drop_duplicates("organism_id")
+        legacy_x = v2_coordinates.set_index("organism_id")["imste_1"].to_dict()
+        legacy_y = v2_coordinates.set_index("organism_id")["imste_2"].to_dict()
+        species["x"] = species["x"].where(species["x"].notna(), species["organism_id"].map(legacy_x))
+        species["y"] = species["y"].where(species["y"].notna(), species["organism_id"].map(legacy_y))
     aliases_path = taxonomy / "aliases.parquet"
     aliases = pd.read_parquet(aliases_path) if aliases_path.exists() else pd.DataFrame()
     aliases_by_id = aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not aliases.empty else {}
@@ -112,16 +139,14 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
             "dimension_id": row["dimension_id"], "dimension": row["dimension_label"],
             "category_id": row["category_id"], "category": row["category_label"],
         }
-    # Keep all completed gate assessments available for inspection, including
-    # confidence values for records that did not pass the acceptance threshold.
+    # The Explorer displays accepted human-pathogen evidence only.
     evidence_path = release / "pathogen_decisions.parquet"
     evidence = pd.read_parquet(evidence_path) if evidence_path.exists() else pd.DataFrame()
     completed_gate_count = 0
     if not evidence.empty:
         evidence = evidence.loc[evidence["status"].astype(str).eq("completed")].copy()
         completed_gate_count = int(evidence[["organism_id", "pmid"]].drop_duplicates().shape[0])
-        # Match the bacterial V2 Explorer's pathogen-only profiles: publish
-        # only assessed virus–PMID records accepted by the configured gate.
+        # Keep the same pathogen-only evidence policy across release sources.
         evidence = evidence.loc[evidence["accepted_pathogen_evidence"].fillna(False).astype(bool)].copy()
     feature_decisions_path = release / "feature_decisions.parquet"
     feature_decisions = pd.read_parquet(feature_decisions_path) if feature_decisions_path.exists() else pd.DataFrame()
@@ -141,9 +166,59 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
             for (organism_id, pmid), group in scored.groupby(["organism_id", "pmid"], sort=False)
         }
         evidence["feature_confidences"] = [confidences.get((str(r.organism_id), str(r.pmid)), {}) for r in evidence.itertuples(index=False)]
+    if not v2_evidence.empty:
+        legacy_evidence = v2_evidence.loc[v2_evidence["accepted"].fillna(False).astype(bool)].copy()
+        legacy_evidence["organism_id"] = legacy_evidence["canonical_species"].astype(str).str.casefold().map(bacteria_organism_by_name)
+        legacy_evidence = legacy_evidence.loc[legacy_evidence["organism_id"].notna()].copy()
+        legacy_evidence["organism_group"] = "bacteria"
+        legacy_evidence["accepted_name"] = legacy_evidence["canonical_species"].astype(str)
+        legacy_evidence["pmid"] = legacy_evidence["pmid"].astype(str)
+        legacy_evidence["p_yes"] = pd.to_numeric(legacy_evidence["p_yes"], errors="coerce")
+        legacy_evidence["candidate_pathogen_evidence"] = True
+        legacy_evidence["accepted_pathogen_evidence"] = True
+        legacy_evidence["evaluation_approved"] = True
+        legacy_evidence["title"] = legacy_evidence["title"].fillna("").astype(str).str.strip()
+        missing_title_pmids = set(legacy_evidence.loc[legacy_evidence["title"].eq(""), "pmid"].astype(str))
+        raw_articles_path = ROOT / "data/migration/version2_snapshot/02_abstracts/raw/pubmed_article_records.jsonl"
+        if missing_title_pmids and raw_articles_path.exists():
+            recovered_titles = {}
+            with raw_articles_path.open(encoding="utf-8") as raw_articles:
+                for line in raw_articles:
+                    article = json.loads(line)
+                    pmid = str(article.get("PMID", ""))
+                    if pmid not in missing_title_pmids:
+                        continue
+                    title_parts = article.get("TI") or article.get("BTI") or article.get("CTI") or []
+                    if isinstance(title_parts, str):
+                        title_parts = [title_parts]
+                    recovered_titles[pmid] = " ".join(map(str, title_parts)).strip()
+                    missing_title_pmids.discard(pmid)
+                    if not missing_title_pmids:
+                        break
+            legacy_evidence["title"] = [title or recovered_titles.get(pmid, "")
+                                         for title, pmid in zip(legacy_evidence["title"], legacy_evidence["pmid"].astype(str))]
+        if not v2_answers.empty:
+            scored_legacy = v2_answers.loc[v2_answers["status"].astype(str).eq("completed") & v2_answers["p_yes"].notna()].copy()
+            scored_legacy["organism_id"] = scored_legacy["canonical_species"].astype(str).str.casefold().map(bacteria_organism_by_name)
+            scored_legacy["pmid"] = scored_legacy["pmid"].astype(str)
+            scored_legacy = scored_legacy.loc[scored_legacy["organism_id"].notna()].copy()
+            legacy_yes = scored_legacy.loc[scored_legacy["answer_yes"].fillna(False).astype(bool)]
+            legacy_supported = legacy_yes.groupby(["organism_id", "pmid"])["question_id"].apply(lambda x: sorted(set(map(str, x)))).to_dict()
+            legacy_confidence = {
+                (str(organism_id), str(pmid)): {
+                    str(feature_id): float(p_yes) for feature_id, p_yes in zip(group["question_id"], group["p_yes"])
+                }
+                for (organism_id, pmid), group in scored_legacy.groupby(["organism_id", "pmid"], sort=False)
+            }
+            legacy_evidence["feature_ids_yes"] = [legacy_supported.get((str(row.organism_id), str(row.pmid)), []) for row in legacy_evidence.itertuples(index=False)]
+            legacy_evidence["feature_confidences"] = [legacy_confidence.get((str(row.organism_id), str(row.pmid)), {}) for row in legacy_evidence.itertuples(index=False)]
+        else:
+            legacy_evidence["feature_ids_yes"] = [[] for _ in range(len(legacy_evidence))]
+            legacy_evidence["feature_confidences"] = [{} for _ in range(len(legacy_evidence))]
+        evidence = pd.concat([evidence, legacy_evidence], ignore_index=True, sort=False)
     evidence_root = ROOT / "sites/pathogen-atlas-explorer/dist/evidence"
     evidence_root.mkdir(parents=True, exist_ok=True)
-    # The virus cohort can shrink when the accepted gate threshold changes.
+    # The accepted pathogen cohort can shrink when its release threshold changes.
     # Remove stale shards so the release archive contains only linked evidence.
     for stale_shard in evidence_root.glob("*.json"):
         stale_shard.unlink()
@@ -152,7 +227,7 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         for organism_id, group in evidence.groupby("organism_id"):
             selected = group.sort_values("pmid", key=lambda s: s.astype(str))
             public_columns = ["organism_id", "organism_group", "accepted_name", "pmid", "p_yes",
-                              "provider", "model", "candidate_pathogen_evidence", "evaluation_approved",
+                              "provider", "model", "candidate_pathogen_evidence", "accepted_pathogen_evidence", "evaluation_approved",
                               "title", "publication_date", "publication_year", "doi",
                               "feature_ids_yes", "feature_confidences"]
             rows = [{key: _safe_json(val) for key, val in row.items() if key in public_columns}
@@ -170,20 +245,19 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         item["feature_values"] = feature_map.get(oid, {})
         item["evidence_file"] = evidence_files.get(oid)
         name_key = str(item.get("accepted_name", "")).casefold()
+        # The released index table is the source of both the score and its
+        # supporting counts. It normalizes within each organism group.
+        index_row = index_by_id.get(oid)
+        if index_row and str(index_row.get("organism_group")) == str(item.get("organism_group")):
+            item.update(index_row)
         if item.get("organism_group") == "bacteria" and name_key in v2_summary_by_name:
             legacy = v2_summary_by_name[name_key]
-            item["n_pathogen_pmids"] = int(legacy.get("n_causation", 0) or 0)
-            item["n_abstracts_fetched"] = int(legacy.get("n_sampled", 0) or 0)
-            item["n_pubmed_search_records"] = int(legacy.get("n_articles", 0) or 0)
-            item["pathogenic_interest_index"] = None if pd.isna(legacy.get("pathogenic_index")) else float(legacy.get("pathogenic_index", 0))
-            item["index_version"] = "pathogenic-interest-index-v2-migrated"
             item["feature_values"] = v2_features_by_name.get(name_key, {})
         legacy_name_fallback = name_key if str(item.get("organism_group", "")).casefold() == "bacteria" else None
         item["wikipedia_url"] = wikipedia_by_id.get(oid) or (wikipedia_by_name.get(legacy_name_fallback) if legacy_name_fallback else None)
         item["gbif_url"] = gbif_by_id.get(oid) or (gbif_by_name.get(legacy_name_fallback) if legacy_name_fallback else None)
         item["taxonomy"] = {part.split("=", 1)[0]: part.split("=", 1)[1] for part in str(item.get("taxonomy_path") or "").split(";") if "=" in part}
         species_rows.append(item)
-    accepted_count = int(species.get("n_pathogen_pmids", pd.Series(dtype=int)).fillna(0).sum())
     accepted_counts: dict[str, int] = {}
     assessment_counts: dict[str, int] = {}
     if not evidence.empty:
@@ -193,15 +267,19 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         oid = str(item["organism_id"])
         item["n_jev_assessments"] = int(assessment_counts.get(oid, 0))
         item["n_jev_accepted_pmids"] = int(accepted_counts.get(oid, 0))
-    # V3 keeps the full taxonomy for bacteria and fungi, while the virus
-    # Explorer cohort mirrors V2's pathogen-only bacterial cohort.
-    species_rows = [item for item in species_rows
-                    if item["organism_group"] != "viruses" or int(item.get("n_pathogen_pmids", 0) or 0) > 0]
-    feature_status_counts = feature_decisions["status"].astype(str).value_counts().to_dict() if not feature_decisions.empty else {}
+    # Keep only human-pathogen profiles: the established V2 evidence cohort for
+    # bacteria and the accepted V3 evidence cohort for viruses.
+    species_rows = [item for item in species_rows if int(item.get("n_pathogen_pmids", 0) or 0) > 0]
+    accepted_count = sum(int(item.get("n_pathogen_pmids", 0) or 0) for item in species_rows)
+    v3_feature_status = feature_decisions["status"].astype(str).value_counts().to_dict() if not feature_decisions.empty else {}
+    v2_feature_status = v2_answers["status"].astype(str).value_counts().to_dict() if not v2_answers.empty else {}
+    feature_status_counts = {status: int(v3_feature_status.get(status, 0)) + int(v2_feature_status.get(status, 0))
+                             for status in set(v3_feature_status) | set(v2_feature_status)}
     stats = {"species_with_profiles": sum(any(v is not None for v in item["feature_values"].values()) for item in species_rows),
              "accepted_species_pmid_records": accepted_count,
              "jev_completed_assessments": completed_gate_count,
              "jev_accepted_species_pmid_records": int(evidence[["organism_id", "pmid"]].drop_duplicates().shape[0]) if not evidence.empty else 0,
+             "bacteria_pathogen_species": sum(item["organism_group"] == "bacteria" for item in species_rows),
              "virus_pathogen_species": sum(item["organism_group"] == "viruses" for item in species_rows),
              "feature_assessments_completed": int(feature_status_counts.get("completed", 0)),
              "feature_assessments_failed": int(feature_status_counts.get("failed", 0)),
@@ -218,9 +296,11 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
                 categories.append({"id": category_id, "label": category["label"], "feature_ids": feature_ids})
         if categories:
             feature_hierarchy.append({"id": dimension_id, "label": dimension["label"], "categories": categories})
+    coordinates_ready = bool(species_rows) and all(pd.notna(item.get("x")) and pd.notna(item.get("y")) for item in species_rows)
     payload = {"release": "Pathogen Atlas V3", "species": species_rows, "features": feature_definitions,
                "feature_hierarchy": feature_hierarchy, "feature_profiles": profiles,
-               "groups": config["project"]["domains"], "coordinates_ready": bool(not coords.empty), "stats": stats}
+               "groups": sorted({item["organism_group"] for item in species_rows}),
+               "coordinates_ready": coordinates_ready, "stats": stats}
     dist = ROOT / "sites/pathogen-atlas-explorer/dist"; dist.mkdir(parents=True, exist_ok=True)
     json_path = dist / "explorer-data.json"
     json_path.write_text(json.dumps(payload, ensure_ascii=False, default=str), encoding="utf-8")

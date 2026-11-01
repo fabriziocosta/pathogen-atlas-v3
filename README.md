@@ -12,7 +12,7 @@ V3 keeps a shared catalogue of research features and selects relevant features f
 
 ## Explore
 
-Open the [Pathogen Atlas Evidence Explorer](https://fabriziocosta.github.io/pathogen-atlas-v3/) on GitHub Pages. Search the published taxonomy catalog and inspect organism profiles, completed Jev pathogen-gate assessments, confidence scores, and PubMed source links. Jev labels remain provisional until labelled evaluation is approved; fitted coordinates are not yet released.
+Open the [Pathogen Atlas Evidence Explorer](https://fabriziocosta.github.io/pathogen-atlas-v3/) on GitHub Pages. It displays human pathogens only: 1,703 bacterial profiles from V2 and 257 virus profiles with accepted V3 Jev pathogen evidence. Profiles include supporting PubMed IDs, titles, and Jev confidence scores. Organism groups without accepted human-pathogen evidence are omitted; fitted coordinates are not yet released.
 
 The static Explorer source is in [`sites/pathogen-atlas-explorer`](sites/pathogen-atlas-explorer/). Generated public data is published as a GitHub Release asset, rather than committed to the source repository, and the Pages workflow assembles the application and data at deployment time.
 
