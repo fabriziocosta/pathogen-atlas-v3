@@ -92,7 +92,10 @@ def _make_base(row: Any, *, kind: str, run_id: str, question_version: str, profi
             "input_hash": row.input_hash, "provider": getattr(client, "provider", "openrouter_jev"),
             "model": client.model, "question_version": question_version,
             "profile_version": profile_version, "run_id": str(run_id),
-            "attempts": attempts, "completed_at": datetime.now(timezone.utc).isoformat()}
+            "attempts": attempts, "completed_at": datetime.now(timezone.utc).isoformat(),
+            "decision_source": "v3_jev", "source_project": None,
+            "source_question_version": None, "source_profile_version": None,
+            "source_run_id": None, "source_input_hash": None, "source_record_path": None}
 
 
 def _call_group(row: Any, *, kind: str, questions: dict[str, dict[str, Any]], run_id: str, question_version: str, profile_version: str, client: DecisionClient, raw_path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -285,7 +288,7 @@ def run_decision_stage(
                         print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed_total:,}; ETA {eta_text}{balance_note}.")
                     new_rows.clear()
     if not output_path.exists():
-        atomic_parquet(pd.DataFrame(columns=["organism_id", "organism_group", "pmid", "decision_kind", "feature_id", "input_hash", "provider", "model", "question_version", "profile_version", "run_id", "p_yes", "status", "attempts", "error", "completed_at", "raw_response_path"]), output_path)
+        atomic_parquet(pd.DataFrame(columns=["organism_id", "organism_group", "pmid", "decision_kind", "feature_id", "input_hash", "provider", "model", "question_version", "profile_version", "run_id", "p_yes", "status", "attempts", "error", "completed_at", "raw_response_path", "decision_source", "source_project", "source_question_version", "source_profile_version", "source_run_id", "source_input_hash", "source_record_path"]), output_path)
     if log and total and callable(balance_method):
         ending_balance, _ = client.remaining_balance()
         if starting_balance is not None and ending_balance is not None:

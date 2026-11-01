@@ -19,6 +19,10 @@ paths:
   raw_responses: data/03_decisions/raw_responses/jev.jsonl
   release_root: data/04_release
   embedding_root: data/05_embeddings
+migration:
+  # V2's 73 bacterial feature definitions match V3's bacteria profile. Import
+  # only when the sampled pair, aliases, title and abstract are unchanged.
+  seed_v2_bacteria_decisions_as_v3: true
 taxonomy:
   bacteria:
     source: lpsn

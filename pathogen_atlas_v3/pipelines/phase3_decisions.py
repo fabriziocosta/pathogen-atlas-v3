@@ -13,17 +13,45 @@ from pathogen_atlas_v3.common.config import selected_organism_groups
 from pathogen_atlas_v3.decisions.features import load_feature_catalog, questions_for_domain
 from pathogen_atlas_v3.decisions.jev import OpenRouterJevClient
 from pathogen_atlas_v3.decisions.runner import run_domain_features, run_pathogen_gate
+from pathogen_atlas_v3.migration.v2_decision_seed import seed_v2_bacteria_decisions_as_v3
+
+
+def _seed_v2_compatibility(config, abstracts, matches, groups, catalog, feature_profiles, *, log=True):
+    migration = config.get("migration", {})
+    if not migration.get("seed_v2_bacteria_decisions_as_v3", False) or "bacteria" not in groups:
+        return {"gate_rows": 0, "feature_rows": 0, "changed_input_pairs": 0}
+    settings, paths = config["decisions"], config["paths"]
+    return seed_v2_bacteria_decisions_as_v3(
+        abstracts,
+        matches,
+        source_root=paths["migration_source"],
+        ledger_path=paths["decision_ledger"],
+        model=str(settings.get("model", "typesafe/jev-1.14")),
+        pathogen_question_version=str(settings["pathogen_question_version"]),
+        feature_question_version=str(settings["feature_question_set_version"]),
+        gate_profile_version="pathogen-gate-v3.1",
+        feature_profile_version=str(catalog["version"]),
+        feature_ids=list(feature_profiles.get("bacteria", [])),
+        feature_catalog=catalog["features"],
+        pathogen_threshold=float(settings.get("pathogen_threshold", .75)),
+        log=log,
+    )
 
 
 def phase3_preflight(config_path: str = "configs/default.yaml") -> dict:
-    """Estimate eligible calls, feature calls, tokens and price from local inputs."""
+    """Prepare compatible local V2 seeds, then estimate pending calls and cost."""
     config = load_yaml(config_path)
     p = Path(config["paths"]["pubmed_release"])
     matches = pd.read_parquet(p / "species_abstracts.parquet")
-    abstracts = pd.read_parquet(p / "abstracts.parquet", columns=["pmid", "abstract"])
+    abstracts = pd.read_parquet(p / "abstracts.parquet")
     groups = selected_organism_groups(config)
     matches = matches.loc[matches["organism_group"].astype(str).isin(groups)]
-    available = set(abstracts.loc[abstracts["abstract"].fillna("").astype(str).str.strip().ne(""), "pmid"].astype(str))
+    catalog, feature_profiles = load_feature_catalog("configs/features.yaml", "configs/feature_profiles.yaml", allow_provisional=True)
+    seed_stats = _seed_v2_compatibility(config, abstracts, matches, groups, catalog, feature_profiles, log=True)
+    has_text = abstracts["abstract"].fillna("").astype(str).str.strip().ne("")
+    if "title" in abstracts:
+        has_text |= abstracts["title"].fillna("").astype(str).str.strip().ne("")
+    available = set(abstracts.loc[has_text, "pmid"].astype(str))
     selected = matches.loc[matches["selected_for_fetch"].fillna(False).astype(bool)]
     selected_pairs = selected.loc[selected["pmid"].astype(str).isin(available), ["organism_id", "pmid"]].drop_duplicates()
     gate_pairs = len(selected_pairs)
@@ -40,14 +68,17 @@ def phase3_preflight(config_path: str = "configs/default.yaml") -> dict:
         passing = gate.loc[pd.to_numeric(gate["p_yes"], errors="coerce").ge(float(decisions.get("pathogen_threshold", .75))), ["organism_id", "pmid"]].drop_duplicates()
         feat = ledger.loc[ledger["decision_kind"].astype(str).eq("feature") & ledger["run_id"].astype(str).eq("v3-features-v1") & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
         cached_feature = feat[["organism_id", "pmid"]].drop_duplicates().shape[0]
-    feature_calls = int(len(passing)) if passing is not None else int(gate_pairs * float(decisions["cost_estimate"].get("expected_pathogen_fraction", .5)))
     pending_gate = max(0, gate_pairs - cached_gate)
+    expected_fraction = float(decisions["cost_estimate"].get("expected_pathogen_fraction", .5))
+    feature_calls = (int(len(passing)) + int(round(pending_gate * expected_fraction))) if passing is not None else int(gate_pairs * expected_fraction)
     input_tokens = pending_gate * int(decisions["cost_estimate"]["input_tokens_per_gate_call"]) + max(0, feature_calls-cached_feature) * int(decisions["cost_estimate"]["input_tokens_per_feature_call"])
     output_tokens = (pending_gate + max(0, feature_calls-cached_feature)) * int(decisions["cost_estimate"]["output_tokens_per_call"])
     input_price, output_price = decisions["cost_estimate"].get("input_usd_per_million_tokens"), decisions["cost_estimate"].get("output_usd_per_million_tokens")
     estimated_cost = None if input_price is None or output_price is None else input_tokens*float(input_price)/1_000_000 + output_tokens*float(output_price)/1_000_000
     return {"eligible_species_pmid_pairs": gate_pairs, "cached_gate_pairs": cached_gate, "pending_gate_calls": pending_gate,
             "estimated_feature_calls": feature_calls, "cached_feature_pairs": cached_feature,
+            "v2_seeded_gate_rows": seed_stats["gate_rows"], "v2_seeded_feature_rows": seed_stats["feature_rows"],
+            "v2_changed_input_pairs": seed_stats["changed_input_pairs"],
             "estimated_input_tokens": input_tokens, "estimated_output_tokens": output_tokens, "estimated_cost_usd": estimated_cost,
             "cost_note": "Approximate token assumptions; configure current model prices in configs/default.yaml to calculate USD." if estimated_cost is None else "Estimate uses configured token assumptions and model prices."}
 
@@ -67,6 +98,7 @@ def run_phase3(config_path: str = "configs/default.yaml", *, max_calls: int | No
     prompt = load_yaml(prompt_path)
     catalog, profiles = load_feature_catalog("configs/features.yaml", "configs/feature_profiles.yaml", allow_provisional=True)
     question_maps = {domain: questions_for_domain(catalog, profiles, domain, allow_provisional=True) for domain in config["project"]["domains"]}
+    _seed_v2_compatibility(config, abstracts, matches, groups, catalog, profiles, log=log)
     if client is None:
         client = OpenRouterJevClient(model=settings.get("model", "typesafe/jev-1.14"), endpoint=settings.get("endpoint", "https://openrouter.ai/api/alpha/decisions"), timeout=float(settings.get("timeout_seconds", 90)), retries=int(settings.get("retries", 3)), backoff_seconds=float(settings.get("backoff_seconds", 1)))
     limit = max_calls if max_calls is not None else settings.get("max_calls")

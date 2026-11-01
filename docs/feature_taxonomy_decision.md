@@ -46,3 +46,9 @@ Some current questions still need subject-matter review for overlap or scope. Ex
 ## Versioning
 
 `schema_version: 2` identifies the nested YAML structure. The catalogue is now `multi-domain-features-v3.2`; this changes the feature prompt because the shared evidence frame and examples are now part of Jev's instructions. Previous v3.1 feature decisions therefore do not count as cached v3.2 decisions and will be rescored on the next Phase 3 run. Domain profiles continue to control the applicable feature set and its order. The Phase 3 cost estimate was raised to account for the larger feature instructions.
+
+## V2 bacteria initialization
+
+V3's 73-feature bacteria profile has the same feature IDs and definitions as V2's 73-question set. To avoid repeating this work, V3 may initialize its bacteria decision ledger with V2 pathogen-gate and feature probabilities, using the V3 run IDs and question/profile versions so matching decisions act as V3 cache entries. This is an explicit compatibility assumption: V2 used earlier prompt instructions, while V3 added the shared evidence frame and inclusion/exclusion examples. Each imported row therefore retains `decision_source: v2_compatibility_seed` and the original V2 question version, run ID, and input hash; feature rows also retain their V2 feature-set version. V2 did not record a separate gate profile version. They are not represented as newly returned V3 provider responses.
+
+Only decisions from the pinned `typesafe/jev-1.14` model are eligible. V2 and V3 must have the same selected species–PMID pair, matched aliases, title, and abstract; changed or absent inputs remain pending for V3 Jev scoring. The import covers the V2 disease gate as well as feature probabilities, so the matching V2 confidence is adopted for the V3 gate threshold. Disable `migration.seed_v2_bacteria_decisions_as_v3` in `configs/default.yaml` to require fresh V3 decisions instead.
