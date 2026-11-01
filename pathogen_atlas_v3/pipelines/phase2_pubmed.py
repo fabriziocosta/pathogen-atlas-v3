@@ -10,8 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pathogen_atlas_v3.abstracts.pubmed import acquire_pubmed
-from pathogen_atlas_v3.abstracts.pubmed import build_name_query
+from pathogen_atlas_v3.abstracts.pubmed import acquire_pubmed, build_name_query, filter_pubmed_search_aliases
 from pathogen_atlas_v3.common.config import selected_organism_groups
 from pathogen_atlas_v3.common.io import atomic_parquet, load_yaml
 
@@ -32,7 +31,8 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
         import os
         has_key = bool(os.environ.get("NCBI_API_KEY") or os.environ.get("EUTILS_API_KEY") or _ncbi_key_from_keychain())
         delay = 0.20 if has_key else 0.34
-    alias_map = aliases.groupby("organism_id")["name"].apply(lambda values: list(dict.fromkeys(map(str, values.dropna())))).to_dict() if not aliases.empty else {}
+    searchable_aliases, excluded_isolate_designations = filter_pubmed_search_aliases(aliases)
+    alias_map = searchable_aliases.groupby("organism_id")["name"].apply(lambda values: list(dict.fromkeys(map(str, values.dropna())))).to_dict() if not searchable_aliases.empty else {}
     per_group = []
     root = Path(config["paths"].get("pubmed_domain_root", Path(config["paths"]["pubmed_release"]).parent / "domains"))
     for group in groups:
@@ -78,6 +78,7 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
     pending_total = sum(item["pending_queries"] for item in per_group)
     eta_seconds = pending_total * float(delay)
     return {"status": "ready", "selected_groups": groups, "per_group": per_group, "pending_queries": pending_total,
+            "excluded_ictv_isolate_designation_aliases": excluded_isolate_designations,
             "request_delay_seconds": float(delay), "estimated_search_floor_minutes": round(eta_seconds / 60, 1),
             "retmax_per_query": retmax,
             "sampling": {"max_pmids_per_species": sampling.get("max_pmids_per_species", 200),

@@ -86,6 +86,51 @@ def build_name_query(names: list[str]) -> str:
     return f"({quoted}) AND {human_context}"
 
 
+def filter_pubmed_search_aliases(aliases: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Exclude ICTV VMR isolate designations from species-level PubMed searches.
+
+    VMR isolate designations identify particular isolates (and can be generic
+    words such as ``Common`` or ``Type``), rather than taxonomic names. Keep
+    those values in the variant/provenance tables, but do not search PubMed for
+    them as species aliases. The source record is retained in the alias table,
+    allowing this filter to also protect existing Phase 1 releases.
+    """
+    if aliases.empty or "source_record_json" not in aliases.columns or "name" not in aliases.columns:
+        return aliases.copy(), 0
+
+    def normalize(value: Any) -> str:
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            return ""
+        try:
+            if pd.isna(value):
+                return ""
+        except (TypeError, ValueError):
+            pass
+        return " ".join(str(value).split()).casefold()
+
+    exclude = []
+    for row in aliases.itertuples(index=False):
+        source = normalize(getattr(row, "source", ""))
+        if source != "ictv_vmr":
+            exclude.append(False)
+            continue
+        payload = getattr(row, "source_record_json", None)
+        try:
+            record = json.loads(payload) if isinstance(payload, str) else payload
+        except (TypeError, ValueError):
+            record = None
+        designation = ""
+        if isinstance(record, dict):
+            designation = next(
+                (normalize(value) for key, value in record.items()
+                 if normalize(key) in {"virus isolate designation", "isolate designation"}),
+                "",
+            )
+        exclude.append(bool(designation and normalize(getattr(row, "name", "")) == designation))
+    mask = pd.Series(exclude, index=aliases.index, dtype=bool)
+    return aliases.loc[~mask].copy(), int(mask.sum())
+
+
 def _thread_session() -> requests.Session:
     if not hasattr(_session_local, "value"):
         _session_local.value = requests.Session()
@@ -491,7 +536,8 @@ def acquire_pubmed(
                 item = json.loads(line); article_cache[str(item["pmid"])] = item
             except (ValueError, KeyError):
                 continue
-    aliases_by_id = aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not aliases.empty else {}
+    searchable_aliases, excluded_isolate_designations = filter_pubmed_search_aliases(aliases)
+    aliases_by_id = searchable_aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not searchable_aliases.empty else {}
     tasks = []
     active_query_ids: set[str] = set()
     for row in species[["organism_id", "organism_group", "accepted_name"]].drop_duplicates("organism_id").itertuples(index=False):
@@ -520,7 +566,7 @@ def acquire_pubmed(
     if max_calls is not None:
         tasks = tasks[:int(max_calls)]
     if log:
-        print(f"PubMed search: {len(species):,} species rows; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
+        print(f"PubMed search: {len(species):,} species rows; {excluded_isolate_designations:,} ICTV isolate-designation aliases excluded; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
     limiter = RateLimiter(request_delay_seconds)
     def search(task: tuple[Any, ...]) -> dict[str, Any]:
         row, names, query, digest, query_id, excluded_alias_count = task

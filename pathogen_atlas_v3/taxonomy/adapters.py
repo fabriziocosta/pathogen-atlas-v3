@@ -208,7 +208,10 @@ def load_ictv_vmr_export(path: str | Path, species: pd.DataFrame, *, release: st
     resolved = {key: next((columns[name] for name in names if name in columns), None) for key, names in field_map.items()}
     variant_rows = []
     alias_rows = []
-    text_alias_fields = ("virus_name", "virus_name_abbreviation", "isolate_designation")
+    # Isolate designations are retained in ``virus_variants`` with full source
+    # provenance, but are not searchable species aliases. Generic designations
+    # such as "Common" and "Type" can otherwise create enormous PubMed hits.
+    text_alias_fields = ("virus_name", "virus_name_abbreviation")
     for row in frame.to_dict("records"):
         source_taxon_id = _text(row.get(taxon_col))
         organism_id, accepted_name = ids.get(source_taxon_id, (None, None))
