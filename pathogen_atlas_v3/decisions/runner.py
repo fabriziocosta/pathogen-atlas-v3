@@ -281,7 +281,8 @@ def run_decision_stage(
                                 balance_note = f"; credits ${latest_balance:.4f}; est. credits at stage end calculating"
                             else:
                                 balance_note = f"; {balance_label} ${latest_balance:.4f}"
-                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed_total:,}; ETA {eta/3600:.2f} h{balance_note}.")
+                        eta_text = f"{eta/60:.1f} min" if eta < 3600 else f"{eta/3600:.2f} h"
+                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed_total:,}; ETA {eta_text}{balance_note}.")
                     new_rows.clear()
     if not output_path.exists():
         atomic_parquet(pd.DataFrame(columns=["organism_id", "organism_group", "pmid", "decision_kind", "feature_id", "input_hash", "provider", "model", "question_version", "profile_version", "run_id", "p_yes", "status", "attempts", "error", "completed_at", "raw_response_path"]), output_path)
