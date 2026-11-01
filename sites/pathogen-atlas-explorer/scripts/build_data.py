@@ -42,36 +42,31 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     if not species_path.exists():
         raise FileNotFoundError("Run Phase 4 before building Explorer data.")
     species = pd.read_parquet(species_path)
-    index = pd.read_parquet(index_path) if index_path.exists() else pd.DataFrame()
-    if not index.empty:
-        index_columns = [column for column in (
-            "organism_id", "organism_group", "n_pathogen_pmids", "n_abstracts_fetched",
-            "n_pubmed_search_records", "estimated_pathogen_pmids",
-            "log_estimated_pathogen_pmids", "pathogenic_interest_index", "index_version",
-        ) if column in index.columns]
-        index_by_id = {
-            str(row["organism_id"]): {key: _safe_json(value) for key, value in row.items() if key != "organism_id"}
-            for row in index[index_columns].to_dict("records")
-        }
-    else:
-        index_by_id = {}
+    if not index_path.exists():
+        raise FileNotFoundError("Run Phase 4 and notebooks/08_pathogenic_interest_index.ipynb before building Explorer data.")
+    index = pd.read_parquet(index_path)
+    index_columns = [column for column in (
+        "organism_id", "organism_group", "n_pathogen_pmids", "n_abstracts_fetched",
+        "n_pubmed_search_records", "estimated_pathogen_pmids",
+        "log_estimated_pathogen_pmids", "pathogenic_interest_index", "index_version", "index_source",
+    ) if column in index.columns]
+    index_by_id = {
+        str(row["organism_id"]): {key: _safe_json(value) for key, value in row.items() if key != "organism_id"}
+        for row in index[index_columns].to_dict("records")
+    }
     features = pd.read_parquet(feature_path) if feature_path.exists() else pd.DataFrame()
     coords = pd.read_parquet(coordinate_path) if coordinate_path.exists() else pd.DataFrame()
     v2_release_root = ROOT / "data/migration/version2_snapshot/04_tables/release"
     v2_species_path = v2_release_root / "species_summary.parquet"
-    v2_index_path = v2_release_root / "pathogenic_index.parquet"
     v2_evidence_path = v2_release_root / "evidence_records.parquet"
     v2_feature_matrix_path = v2_release_root / "species_feature_matrix.parquet"
     v2_answers_path = v2_release_root / "domain_expert_answers.parquet"
     v2_coordinates_path = ROOT / "data/migration/version2_snapshot/05_plots/release/species_feature_space_coordinates.parquet"
     v2_species = pd.read_parquet(v2_species_path) if v2_species_path.exists() else pd.DataFrame()
-    v2_index = pd.read_parquet(v2_index_path) if v2_index_path.exists() else pd.DataFrame()
     v2_evidence = pd.read_parquet(v2_evidence_path) if v2_evidence_path.exists() else pd.DataFrame()
     v2_feature_matrix = pd.read_parquet(v2_feature_matrix_path) if v2_feature_matrix_path.exists() else pd.DataFrame()
     v2_answers = pd.read_parquet(v2_answers_path) if v2_answers_path.exists() else pd.DataFrame()
     v2_coordinates = pd.read_parquet(v2_coordinates_path) if v2_coordinates_path.exists() else pd.DataFrame()
-    if not v2_species.empty and not v2_index.empty:
-        v2_species = v2_species.merge(v2_index[["canonical_species", "pathogenic_index"]], on="canonical_species", how="left")
     v2_summary_by_name = {
         str(row.canonical_species).casefold(): row._asdict()
         for row in v2_species.itertuples(index=False)

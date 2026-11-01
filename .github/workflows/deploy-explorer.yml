@@ -59,6 +59,8 @@ jobs:
           cp sites/pathogen-atlas-explorer/dist/index.html _site/index.html
           mkdir -p _site/assets
           cp sites/pathogen-atlas-explorer/dist/assets/pathogen-atlas-logo.png _site/assets/pathogen-atlas-logo.png
+          mkdir -p _site/assets/favicons
+          cp sites/pathogen-atlas-explorer/dist/assets/favicons/*.ico _site/assets/favicons/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
