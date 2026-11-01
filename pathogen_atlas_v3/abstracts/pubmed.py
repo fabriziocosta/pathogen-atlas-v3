@@ -293,15 +293,17 @@ def _expand_query_overflow(
     email: str,
     api_key: str | None,
     limiter: RateLimiter,
+    max_workers: int = 10,
     progress_every: int,
     requester=None,
     log: bool = True,
 ) -> list[dict[str, Any]]:
     """Expand over-cap PubMed searches into resumable date/UID segments.
 
-    NCBI limits ESearch's PubMed ID list to 10,000 records. Partitioning by
-    Entrez date avoids result truncation; exceptionally dense single days are
-    subdivided by PubMed UID ranges.
+    Different species queries are expanded concurrently, while one shared
+    rate limiter keeps aggregate NCBI request starts within the configured
+    limit. Every completed segment is appended before the worker continues, so
+    an interrupted run resumes from durable segment records.
     """
     if not query_rows:
         return query_rows
@@ -314,13 +316,17 @@ def _expand_query_overflow(
             except (ValueError, KeyError):
                 continue
     segment_cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_lock = threading.Lock()
+    request_count_lock = threading.Lock()
     started_all = time.monotonic()
     segment_requests_all = 0
     start_date = date(1800, 1, 1)
     end_date = date.today()
     max_uid = 1_000_000_000
 
-    for query_index, item in enumerate(query_rows, 1):
+    def expand_one(task: tuple[int, dict[str, Any]]) -> tuple[int, dict[str, Any], int]:
+        nonlocal segment_requests_all
+        query_index, item = task
         original_pmids = {str(pmid) for pmid in item.get("pmids", [])}
         base_query = str(item["query"])
         query_id = str(item["query_id"])
@@ -328,6 +334,7 @@ def _expand_query_overflow(
         expanded_pmids: set[str] = set()
         expanded_count = 0
         segment_count = 0
+        network_requests = 0
         while stack:
             mindate, maxdate, uid_low, uid_high = stack.pop()
             segment_key_value = {
@@ -339,7 +346,8 @@ def _expand_query_overflow(
                 "retmax": retmax,
             }
             segment_id = hashlib.sha256(json.dumps(segment_key_value, sort_keys=True).encode()).hexdigest()
-            cached = segment_cache.get(segment_id)
+            with cache_lock:
+                cached = segment_cache.get(segment_id)
             if cached is None:
                 term = base_query
                 if uid_low is not None and uid_high is not None:
@@ -362,9 +370,22 @@ def _expand_query_overflow(
                     "pmids": [str(pmid) for pmid in result.get("idlist", [])],
                     "completed_at": time.time(),
                 }
-                append_jsonl(segment_cache_path, cached)
-                segment_cache[segment_id] = cached
-                segment_requests_all += 1
+                with cache_lock:
+                    append_jsonl(segment_cache_path, cached)
+                    segment_cache[segment_id] = cached
+                network_requests += 1
+                with request_count_lock:
+                    segment_requests_all += 1
+                    total_requests = segment_requests_all
+                if log and total_requests % max(1, progress_every) == 0:
+                    elapsed = max(0.01, time.monotonic() - started_all)
+                    rate = total_requests / elapsed
+                    print(
+                        f"PubMed overflow: {total_requests:,} network segments completed; "
+                        f"{query_index}/{len(query_rows)} query workers active; "
+                        f"query {query_index} has {len(stack):,} queued segments; "
+                        f"ETA lower bound {len(stack) / rate / 60:.1f} min."
+                    )
             segment_count += 1
             count = int(cached.get("count", 0))
             segment_pmids = {str(pmid) for pmid in cached.get("pmids", [])}
@@ -384,16 +405,6 @@ def _expand_query_overflow(
             else:
                 stack.append((mindate, maxdate, 1, max_uid))
 
-            if log and segment_requests_all and segment_requests_all % max(1, progress_every // 10) == 0:
-                elapsed = max(0.01, time.monotonic() - started_all)
-                rate = segment_requests_all / elapsed
-                queued_floor = len(stack)
-                print(
-                    f"PubMed overflow: query {query_index}/{len(query_rows)}; "
-                    f"{segment_count} segments examined; {queued_floor} queued; "
-                    f"ETA at least {queued_floor / rate / 60:.1f} min."
-                )
-
         merged_pmids = sorted(original_pmids | expanded_pmids)
         verified = expanded_count == len(expanded_pmids) and original_pmids.issubset(expanded_pmids)
         updated = {
@@ -407,17 +418,25 @@ def _expand_query_overflow(
             "overflow_segments": segment_count,
             "overflow_completed_at": time.time(),
         }
-        append_jsonl(query_cache_path, updated)
+        with cache_lock:
+            append_jsonl(query_cache_path, updated)
         item.clear()
         item.update(updated)
+        return query_index, updated, network_requests
+
+    completed_queries = 0
+    task_rows = list(enumerate(query_rows, 1))
+    for query_index, updated, _ in _bounded_results(task_rows, expand_one, max_workers=max(1, int(max_workers))):
+        completed_queries += 1
         if log:
             elapsed = max(0.01, time.monotonic() - started_all)
-            rate = query_index / elapsed
-            eta = (len(query_rows) - query_index) / rate / 60 if rate else 0
-            status = "complete" if verified else "verification mismatch"
+            rate = completed_queries / elapsed
+            eta = (len(query_rows) - completed_queries) / rate / 60 if rate else 0
+            status = "complete" if updated["search_complete"] else "verification mismatch"
             print(
-                f"PubMed overflow: {query_index}/{len(query_rows)} species queries; "
-                f"{len(merged_pmids):,} PMIDs; {segment_count} segments; {status}; ETA {eta:.1f} min."
+                f"PubMed overflow: {completed_queries}/{len(query_rows)} species queries completed "
+                f"(query {query_index}, {len(updated['pmids']):,} PMIDs, "
+                f"{updated['overflow_segments']} segments, {status}); ETA {eta:.1f} min."
             )
     return query_rows
 
@@ -533,6 +552,7 @@ def acquire_pubmed(
             email=email,
             api_key=api_key,
             limiter=limiter,
+            max_workers=max_workers,
             progress_every=progress_every,
             requester=requester,
             log=log,
