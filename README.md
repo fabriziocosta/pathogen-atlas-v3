@@ -12,7 +12,9 @@ V3 keeps a shared catalogue of research features and selects relevant features f
 
 ## Explore
 
-The static multi-domain Evidence Explorer source is in [`sites/pathogen-atlas-explorer`](sites/pathogen-atlas-explorer/). Build its data from the Phase 4 releases after scored evidence and embedding coordinates exist, then run `python launch_explorer.py` from this directory. The current bootstrapped release contains taxonomy and migration inputs, but no new V3 Jev decisions or fitted coordinates yet.
+Open the [Pathogen Atlas Evidence Explorer](https://fabriziocosta.github.io/pathogen-atlas-v3/) on GitHub Pages. Search the published taxonomy catalog and inspect organism profiles and source links. The Explorer will switch to the interactive feature map as V3's scored evidence and fitted coordinates are released; the current public snapshot does not yet include those results.
+
+The static Explorer source is in [`sites/pathogen-atlas-explorer`](sites/pathogen-atlas-explorer/). Generated public data is published as a GitHub Release asset, rather than committed to the source repository, and the Pages workflow assembles the application and data at deployment time.
 
 ## Project structure
 
