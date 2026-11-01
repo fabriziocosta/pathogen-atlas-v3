@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
+import subprocess
+import sys
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -18,6 +22,21 @@ from pathogen_atlas_v3.common.io import append_jsonl, atomic_parquet
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 _session_local = threading.local()
+
+
+def _ncbi_key_from_keychain() -> str | None:
+    """Read the optional NCBI key from the AMR-compatible macOS Keychain item."""
+    if sys.platform != "darwin" or shutil.which("security") is None:
+        return None
+    try:
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", "NCBI", "-a", "NCBI_API_KEY", "-w"],
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    key = result.stdout.strip()
+    return key if result.returncode == 0 and key else None
 
 
 class RateLimiter:
@@ -37,7 +56,7 @@ class RateLimiter:
 
 
 def build_name_query(names: list[str]) -> str:
-    clean = sorted({" ".join(str(name).split()) for name in names if str(name).strip()}, key=str.casefold)
+    clean = sorted({normalized for name in names if (normalized := " ".join(str(name).split())) and len(normalized) >= 3 and not re.fullmatch(r"\d+(?:\.\d+)?", normalized)}, key=str.casefold)
     if not clean:
         raise ValueError("At least one accepted or synonym name is required.")
     quoted = " OR ".join(f'"{name.replace(chr(34), "")}"[Title/Abstract]' for name in clean)
@@ -51,14 +70,30 @@ def _thread_session() -> requests.Session:
     return _session_local.value
 
 
-def _request(url: str, params: dict[str, Any], *, email: str, api_key: str | None, limiter: RateLimiter, requester=None) -> requests.Response:
-    limiter.wait()
+def _request(url: str, params: dict[str, Any], *, email: str, api_key: str | None, limiter: RateLimiter, requester=None, retries: int = 3) -> requests.Response:
     query = {**params, "tool": "pathogen_atlas_v3", "email": email}
     if api_key:
         query["api_key"] = api_key
-    response = requester(url, params=query, timeout=120) if requester is not None else _thread_session().get(url, params=query, timeout=120)
-    response.raise_for_status()
-    return response
+    for attempt in range(retries + 1):
+        limiter.wait()
+        try:
+            response = requester(url, params=query, timeout=120) if requester is not None else _thread_session().get(url, params=query, timeout=120)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if attempt < retries and (status == 429 or status is None or status >= 500):
+                retry_after = None
+                response_headers = getattr(getattr(exc, "response", None), "headers", {}) or {}
+                try:
+                    retry_after = float(response_headers.get("Retry-After"))
+                except (TypeError, ValueError):
+                    pass
+                time.sleep(max(retry_after or 0, min(30, 2 ** attempt)))
+                continue
+            detail = f"HTTP {status}" if status is not None else "network failure"
+            raise RuntimeError(f"NCBI E-utilities request failed after {attempt + 1} attempt(s): {detail}; URL and credentials redacted.") from None
+    raise RuntimeError("NCBI E-utilities request failed; URL and credentials redacted.")
 
 
 def _bounded_results(tasks, worker, max_workers: int):
@@ -75,6 +110,46 @@ def _bounded_results(tasks, worker, max_workers: int):
                 yield future.result()
                 try: futures.add(pool.submit(worker, next(iterator)))
                 except StopIteration: pass
+
+
+def _fetch_batches(match_frame: pd.DataFrame, article_cache: dict[str, dict[str, Any]], *, batch_size: int, max_batches: int | None) -> tuple[list[str], list[list[str]]]:
+    """Select missing PMIDs fairly across domains when a bounded fetch is requested."""
+    if match_frame.empty:
+        return [], []
+    missing = set(match_frame["pmid"].astype(str)) - set(article_cache)
+    if not missing:
+        return [], []
+    if max_batches is None:
+        selected = sorted(missing)
+        return selected, [selected[i:i + batch_size] for i in range(0, len(selected), batch_size)]
+    if max_batches < 0:
+        raise ValueError("max_fetch_batches cannot be negative.")
+    groups = sorted(match_frame["organism_group"].dropna().astype(str).unique())
+    queues = {
+        group: sorted(set(match_frame.loc[match_frame["organism_group"].astype(str).eq(group), "pmid"].astype(str)) & missing)
+        for group in groups
+    }
+    offsets = {group: 0 for group in groups}
+    selected: set[str] = set()
+    batches: list[list[str]] = []
+    while len(batches) < max_batches:
+        progressed = False
+        for group in groups:
+            if len(batches) >= max_batches:
+                break
+            queue = queues[group]
+            start = offsets[group]
+            while start < len(queue) and queue[start] in selected:
+                start += 1
+            chunk = [pmid for pmid in queue[start:start + batch_size] if pmid not in selected]
+            offsets[group] = min(len(queue), start + batch_size)
+            if chunk:
+                selected.update(chunk)
+                batches.append(chunk)
+                progressed = True
+        if not progressed:
+            break
+    return sorted(selected), batches
 
 
 def parse_article_xml(payload: str) -> list[dict[str, Any]]:
@@ -108,7 +183,7 @@ def acquire_pubmed(
     cache_dir: str | Path = "data/02_pubmed/cache",
     release_dir: str | Path = "data/02_pubmed/release",
     max_workers: int = 10,
-    request_delay_seconds: float = 0.11,
+    request_delay_seconds: float | None = None,
     max_calls: int | None = None,
     max_fetch_batches: int | None = None,
     retmax: int = 10000,
@@ -118,7 +193,7 @@ def acquire_pubmed(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Search each organism, fetch each PMID once, and checkpoint raw JSONL caches."""
     email = (email or os.environ.get("NCBI_EMAIL", "")).strip()
-    api_key = (api_key or os.environ.get("NCBI_API_KEY", "")).strip() or None
+    api_key = (api_key or os.environ.get("NCBI_API_KEY", "") or os.environ.get("EUTILS_API_KEY", "")).strip() or _ncbi_key_from_keychain()
     if not email:
         raise ValueError("Set NCBI_EMAIL before live PubMed requests.")
     if max_workers < 1 or batch_size < 1:
@@ -144,23 +219,38 @@ def acquire_pubmed(
                 continue
     aliases_by_id = aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not aliases.empty else {}
     tasks = []
+    active_query_ids: set[str] = set()
     import hashlib
     for row in species[["organism_id", "organism_group", "accepted_name"]].drop_duplicates("organism_id").itertuples(index=False):
-        names = list(aliases_by_id.get(row.organism_id, []))
+        raw_names = list(aliases_by_id.get(row.organism_id, []))
+        names = [name for name in raw_names if len(" ".join(str(name).split())) >= 3 and not re.fullmatch(r"\d+(?:\.\d+)?", " ".join(str(name).split()))]
+        excluded_alias_count = len(raw_names) - len(names)
         if row.accepted_name not in names:
             names.insert(0, row.accepted_name)
         query = build_name_query(names)
-        digest = hashlib.sha256(query.encode()).hexdigest()
+        digest = hashlib.sha256(f"{query}\nretmax={retmax}".encode()).hexdigest()
         query_id = f"q_{digest[:20]}"
+        active_query_ids.add(query_id)
         if query_id not in query_cache:
-            tasks.append((row, names, query, digest, query_id))
+            reusable = next((item for item in query_cache.values() if item.get("query") == query and (item.get("search_complete", False) or len(item.get("pmids", [])) >= retmax)), None)
+            if reusable is not None:
+                pmids = list(reusable.get("pmids", []))[:retmax]
+                count = int(reusable.get("count", len(pmids)))
+                query_cache[query_id] = {**reusable, "query_id": query_id, "query_hash": digest,
+                    "organism_id": row.organism_id, "organism_group": row.organism_group,
+                    "accepted_name": row.accepted_name, "matched_names": names, "pmids": pmids,
+                    "search_complete": len(pmids) >= count, "search_incomplete_count": max(0, count - len(pmids)),
+                    "excluded_alias_count": excluded_alias_count}
+                append_jsonl(query_path, query_cache[query_id])
+            else:
+                tasks.append((row, names, query, digest, query_id, excluded_alias_count))
     if max_calls is not None:
         tasks = tasks[:int(max_calls)]
     if log:
         print(f"PubMed search: {len(species):,} species rows; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
     limiter = RateLimiter(request_delay_seconds)
     def search(task: tuple[Any, ...]) -> dict[str, Any]:
-        row, names, query, digest, query_id = task
+        row, names, query, digest, query_id, excluded_alias_count = task
         response = _request(f"{EUTILS}/esearch.fcgi", {"db": "pubmed", "term": query, "retmax": retmax, "retmode": "json"}, email=email, api_key=api_key, limiter=limiter, requester=requester)
         result = response.json().get("esearchresult", {})
         pmids = result.get("idlist", [])
@@ -168,7 +258,7 @@ def acquire_pubmed(
         return {"query_id": query_id, "query_hash": digest, "organism_id": row.organism_id, "organism_group": row.organism_group,
                 "accepted_name": row.accepted_name, "matched_names": names, "query": query,
                 "pmids": pmids, "count": count, "search_complete": len(pmids) >= count,
-                "search_incomplete_count": max(0, count - len(pmids)),
+                "search_incomplete_count": max(0, count - len(pmids)), "excluded_alias_count": excluded_alias_count,
                 "completed_at": time.time()}
     search_start = time.monotonic()
     for index, item in enumerate(_bounded_results(tasks, search, max_workers), 1):
@@ -177,17 +267,15 @@ def acquire_pubmed(
             rate = index / max(0.01, time.monotonic() - search_start)
             print(f"PubMed search: {index:,}/{len(tasks):,}; ETA {(len(tasks)-index)/rate/60:.1f} min.")
     associations = []
-    for item in query_cache.values():
+    active_queries = [query_cache[query_id] for query_id in active_query_ids if query_id in query_cache]
+    for item in active_queries:
         for pmid in item.get("pmids", []):
             associations.append({"organism_id": item["organism_id"], "organism_group": item["organism_group"], "accepted_name": item["accepted_name"], "pmid": str(pmid),
                                  "matched_names": item["matched_names"], "query_id": item["query_id"], "query_hash": item["query_hash"], "selected_for_fetch": True})
     match_frame = pd.DataFrame(associations, columns=["organism_id", "organism_group", "accepted_name", "pmid", "matched_names", "query_id", "query_hash", "selected_for_fetch"])
     if not match_frame.empty:
         match_frame = match_frame.drop_duplicates(["organism_id", "pmid"])
-    missing_pmids = sorted(set(match_frame["pmid"].astype(str)) - set(article_cache)) if not match_frame.empty else []
-    batches = [missing_pmids[i:i+batch_size] for i in range(0, len(missing_pmids), batch_size)]
-    if max_fetch_batches is not None:
-        batches = batches[:int(max_fetch_batches)]
+    missing_pmids, batches = _fetch_batches(match_frame, article_cache, batch_size=batch_size, max_batches=int(max_fetch_batches) if max_fetch_batches is not None else None)
     def fetch(batch: list[str]) -> list[dict[str, Any]]:
         response = _request(f"{EUTILS}/efetch.fcgi", {"db": "pubmed", "id": ",".join(batch), "retmode": "xml"}, email=email, api_key=api_key, limiter=limiter, requester=requester)
         return parse_article_xml(response.text)
@@ -210,6 +298,16 @@ def acquire_pubmed(
         match_frame = match_frame.drop(columns="abstract")
     atomic_parquet(match_frame, release / "species_abstracts.parquet")
     atomic_parquet(abstracts_frame, release / "abstracts.parquet")
-    metadata = {"query_count": len(query_cache), "incomplete_query_count": sum(not item.get("search_complete", True) for item in query_cache.values()), "search_incomplete_pmid_count": sum(int(item.get("search_incomplete_count", 0)) for item in query_cache.values()), "species_abstract_matches": len(match_frame), "abstract_count": len(abstracts_frame), "cached_at": pd.Timestamp.utcnow().isoformat()}
+    active_group_summaries = {}
+    for group in sorted({str(item["organism_group"]) for item in active_queries}):
+        group_queries = [item for item in active_queries if str(item["organism_group"]) == group]
+        active_group_summaries[group] = {
+            "query_count": len(group_queries), "total_pubmed_search_count": sum(int(item.get("count", 0)) for item in group_queries),
+            "pmids_returned": sum(len(item.get("pmids", [])) for item in group_queries),
+            "incomplete_queries": sum(not item.get("search_complete", True) for item in group_queries),
+            "pmids_beyond_retmax": sum(int(item.get("search_incomplete_count", 0)) for item in group_queries),
+            "excluded_short_or_numeric_aliases": sum(int(item.get("excluded_alias_count", 0)) for item in group_queries),
+        }
+    metadata = {"query_count": len(active_queries), "incomplete_query_count": sum(not item.get("search_complete", True) for item in active_queries), "search_incomplete_pmid_count": sum(int(item.get("search_incomplete_count", 0)) for item in active_queries), "query_summary_by_group": active_group_summaries, "species_abstract_matches": len(match_frame), "abstract_count": len(abstracts_frame), "cached_at": pd.Timestamp.utcnow().isoformat()}
     (release / "acquisition_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return match_frame, abstracts_frame

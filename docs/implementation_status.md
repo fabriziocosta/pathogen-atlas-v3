@@ -20,4 +20,4 @@
 - Fit and inspect V3 shared and domain-specific IMSTE spaces after scored features exist.
 - Extend Wikipedia and GBIF link association coverage to the new fungal/viral cohorts.
 
-No live PubMed or OpenRouter requests were made while bootstrapping this repository.
+A bounded live PubMed pilot has run for ten taxa in each organism group. Its query and abstract caches are local under `data/02_pubmed/`; see `pilot_review.md` in the `pilot_v2_filtered_aliases` directory. No Jev calls have been made, and the capped search results are not full acquisition releases.

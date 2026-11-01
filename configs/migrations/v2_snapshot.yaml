@@ -46,9 +46,9 @@ imported_counts:
   virus_species: 17554
   virus_alias_records: 17554
   virus_variant_records: 19285
-  virus_variant_aliases: 36652
+  virus_variant_aliases: 37279
   combined_species: 142201
-  combined_alias_records: 232980
+  combined_alias_records: 233550
   combined_unresolved_alias_mappings: 21291
 git_policy:
   all_data_and_generated_outputs: local_only_ignored

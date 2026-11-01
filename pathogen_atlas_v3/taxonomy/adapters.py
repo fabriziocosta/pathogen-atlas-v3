@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -222,16 +223,18 @@ def load_ictv_vmr_export(path: str | Path, species: pd.DataFrame, *, release: st
             variant[key] = _text(row.get(column)) or None if column else None
         variant_rows.append(variant)
         for key in text_alias_fields:
-            alias_name = _text(variant.get(key))
-            if not alias_name:
+            alias_value = _text(variant.get(key))
+            if not alias_value:
                 continue
-            alias_rows.append({
-                "organism_id": organism_id, "organism_group": "viruses", "name": alias_name,
-                "name_type": "virus_or_strain_alias", "source": "ictv_vmr",
-                "source_record_id": _text(variant.get("isolate_id")) or None,
-                "source_record_json": variant["source_record_json"],
-                "mapping_status": "source_alias" if organism_id else "unresolved_ictv_taxon_id",
-            })
+            delimiter = r"\s*[;|,]\s*" if key == "virus_name_abbreviation" else r"\s*[;|]\s*"
+            for alias_name in filter(None, (part.strip() for part in re.split(delimiter, alias_value))):
+                alias_rows.append({
+                    "organism_id": organism_id, "organism_group": "viruses", "name": alias_name,
+                    "name_type": "virus_or_strain_alias", "source": "ictv_vmr",
+                    "source_record_id": _text(variant.get("isolate_id")) or None,
+                    "source_record_json": variant["source_record_json"],
+                    "mapping_status": "source_alias" if organism_id else "unresolved_ictv_taxon_id",
+                })
     variants = pd.DataFrame(variant_rows)
     aliases = pd.DataFrame(alias_rows)
     if not aliases.empty:

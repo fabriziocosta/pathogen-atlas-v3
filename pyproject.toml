@@ -30,6 +30,7 @@ dev = ["pytest>=8.0", "nbformat>=5.0"]
 pathogen-atlas-v3-migrate-v2 = "pathogen_atlas_v3.migration.version2:main"
 pathogen-atlas-v3-phase1 = "pathogen_atlas_v3.pipelines.phase1_taxonomy:main"
 pathogen-atlas-v3-phase2 = "pathogen_atlas_v3.pipelines.phase2_pubmed:main"
+pathogen-atlas-v3-phase2-pilot = "pathogen_atlas_v3.pipelines.phase2_pilot:main"
 pathogen-atlas-v3-phase3 = "pathogen_atlas_v3.pipelines.phase3_decisions:main"
 pathogen-atlas-v3-phase4 = "pathogen_atlas_v3.pipelines.phase4_release:main"
 pathogen-atlas-v3-phase5 = "pathogen_atlas_v3.pipelines.phase5_embedding:main"

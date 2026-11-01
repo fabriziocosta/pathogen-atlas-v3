@@ -9,7 +9,8 @@ import requests
 from pathogen_atlas_v3.decisions.features import load_feature_catalog, questions_for_domain
 from pathogen_atlas_v3.decisions.jev import OpenRouterJevClient, extract_noul_probability
 from pathogen_atlas_v3.decisions.runner import prepare_species_abstracts, run_decision_stage, run_domain_features, run_pathogen_gate
-from pathogen_atlas_v3.abstracts.pubmed import acquire_pubmed, build_name_query
+from pathogen_atlas_v3.abstracts.pubmed import RateLimiter, _fetch_batches, _request, acquire_pubmed, build_name_query
+from pathogen_atlas_v3.pipelines.phase2_pilot import select_pilot_species
 from pathogen_atlas_v3.tables.interest_index import build_pathogenic_interest_index
 from pathogen_atlas_v3.taxonomy.adapters import load_ictv_msl_export, load_ictv_vmr_export, load_species_fungorum_export
 
@@ -63,10 +64,13 @@ class FakeSession:
 
 
 class FakeGetResponse:
-    status_code = 200
-    def __init__(self, *, json_value=None, text=""):
-        self._json, self.text = json_value, text
-    def raise_for_status(self): pass
+    def __init__(self, *, json_value=None, text="", status=200):
+        self._json, self.text, self.status_code = json_value, text, status
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            error = requests.HTTPError(f"HTTP {self.status_code}")
+            error.response = self
+            raise error
     def json(self): return self._json
 
 
@@ -133,6 +137,30 @@ def test_bounded_fake_end_to_end_all_organism_groups(tmp_path):
     selected = features.loc[features.decision_kind.eq("feature")]
     assert set(selected.organism_group) == {"bacteria", "fungi", "viruses"}
     assert len(selected) == 3
+
+
+def test_phase2_pilot_selection_is_bounded_deterministic_and_multidomain():
+    species = pd.DataFrame([
+        {"organism_id": f"{group}:{i}", "organism_group": group,
+         "accepted_name": f"{group} candidate {i}", "taxonomy_path": f"phylum=Phylum{i%3};family=Family{i%4}",
+         "mapping_status": "accepted"}
+        for group in ("bacteria", "fungi", "viruses") for i in range(15)
+    ])
+    first, manifest = select_pilot_species(species, pd.DataFrame(), per_group=5, seed=12)
+    second, _ = select_pilot_species(species, pd.DataFrame(), per_group=5, seed=12)
+    assert first.organism_id.tolist() == second.organism_id.tolist()
+    assert first.groupby("organism_group").size().to_dict() == {"bacteria": 5, "fungi": 5, "viruses": 5}
+    assert manifest["selected_per_group"] == {"bacteria": 5, "fungi": 5, "viruses": 5}
+
+
+def test_bounded_abstract_fetch_allocates_batches_across_groups():
+    matches = pd.DataFrame([
+        {"organism_group": group, "pmid": f"{group}-{i}"}
+        for group in ("bacteria", "fungi", "viruses") for i in range(300)
+    ])
+    pmids, batches = _fetch_batches(matches, {}, batch_size=100, max_batches=3)
+    assert len(batches) == 3 and len(pmids) == 300
+    assert [batch[0].split("-")[0] for batch in batches] == ["bacteria", "fungi", "viruses"]
 
 
 def test_typed_payload_probability_validation_and_transient_retry():
@@ -207,6 +235,7 @@ def test_pinned_source_layouts_map_fungal_synonyms_and_ictv_hierarchy(tmp_path):
 def test_pubmed_uses_fake_requester_and_resumes_query_and_abstract_cache(tmp_path, monkeypatch):
     assert '"Candida test"[Title/Abstract]' in build_name_query(["Candida test", "Old Candida"])
     assert '"Old Candida"[Title/Abstract]' in build_name_query(["Candida test", "Old Candida"])
+    assert '"17"[Title/Abstract]' not in build_name_query(["Candida test", "17"])
     calls = []
     monkeypatch.setenv("NCBI_API_KEY", "test-key")
     xml = "<PubmedArticleSet><PubmedArticle><MedlineCitation><PMID>42</PMID><Article><ArticleTitle>Example article</ArticleTitle><Abstract><AbstractText>Human disease abstract.</AbstractText></Abstract><Journal><Title>Journal</Title></Journal><AuthorList><Author><ForeName>A</ForeName><LastName>Person</LastName></Author></AuthorList></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"
@@ -223,8 +252,20 @@ def test_pubmed_uses_fake_requester_and_resumes_query_and_abstract_cache(tmp_pat
     assert pd.read_json(tmp_path/"release"/"acquisition_metadata.json", typ="series")["incomplete_query_count"] == 1
     assert abstracts.iloc[0].title == "Example article"
     assert len(calls) == 2
-    acquire_pubmed(species, aliases, email="test@example.org", cache_dir=tmp_path/"cache", release_dir=tmp_path/"release", max_workers=1, request_delay_seconds=0, requester=requester, log=False)
-    assert len(calls) == 2
+    acquire_pubmed(species, aliases, email="test@example.org", cache_dir=tmp_path/"cache", release_dir=tmp_path/"release", max_workers=1, request_delay_seconds=0, retmax=500, requester=requester, log=False)
+    assert len(calls) == 3  # a different result cap gets a separate query cache identity
+
+
+def test_pubmed_retries_rate_limits_and_redacts_request_credentials(monkeypatch):
+    monkeypatch.setattr("pathogen_atlas_v3.abstracts.pubmed.time.sleep", lambda _seconds: None)
+    replies = [FakeGetResponse(json_value={}, status=429) for _ in range(4)]
+    def requester(_url, *, params, timeout):
+        assert params["api_key"] == "secret-key-for-test"
+        return replies.pop(0)
+    with pytest.raises(RuntimeError) as error:
+        _request("https://example.test/query", {}, email="test@example.org", api_key="secret-key-for-test", limiter=RateLimiter(0), requester=requester)
+    assert "429" in str(error.value)
+    assert "secret-key-for-test" not in str(error.value)
 
 
 def test_interest_index_retains_counts_and_normalizes_per_domain():

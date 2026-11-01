@@ -55,7 +55,10 @@ def migrate_v2_snapshot(source_root: str | Path, output_root: str | Path) -> dic
     species["rank"] = "species"
     species["parent_taxon_id"] = pd.NA
     ranks = [c for c in ("domain", "kingdom", "phylum", "class", "order", "family", "genus") if c in species]
-    species["taxonomy_path"] = species[ranks].fillna("").agg(";".join, axis=1) if ranks else ""
+    species["taxonomy_path"] = species[ranks].apply(
+        lambda row: ";".join(f"{rank}={str(value).strip()}" for rank, value in row.items() if pd.notna(value) and str(value).strip()),
+        axis=1,
+    ) if ranks else ""
     species["source_record_json"] = "{}"
     species["mapping_status"] = species.get("status", "accepted")
     species_out = species[["organism_id", "organism_group", "accepted_name", "source_taxon_id", "taxonomy_source", "taxonomy_release", "rank", "parent_taxon_id", "taxonomy_path", "source_record_json", "mapping_status"]].drop_duplicates("organism_id")
