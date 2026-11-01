@@ -8,7 +8,11 @@ Organize the V3 feature catalogue as a three-level hierarchy:
 2. **Category** — a coherent group of related concepts within that dimension.
 3. **Feature** — one versioned question assessed against the title and abstract.
 
-The hierarchy lives in `configs/features.yaml`, so it can be inspected and edited alongside each feature's ID, definition, applicable organism groups, question version, evidence instructions, criteria, and review status. `configs/feature_profiles.yaml` remains the explicit ordered list of features to score for each organism group. The Python loader validates and flattens the hierarchy for scoring; the Explorer consumes the same hierarchy to group feature summaries.
+The hierarchy lives in `configs/features.yaml`, so it can be inspected and edited alongside each feature's ID, definition, applicable organism groups, question version, evidence instructions, criteria, and review status. Every feature uses the shared evidence frame:
+
+> In this abstract, is this specific claim explicitly reported about the named species in a human disease context: “[feature claim]”?
+
+Each feature also has an explicit `question_claim`, plus `inclusion_examples` and `exclusion_examples`. The examples are schematic claim-specific patterns, not quotations or claims about particular publications. They clarify what counts as evidence for that feature and when similar wording is insufficient. They are included in Jev's instructions. `configs/feature_profiles.yaml` remains the explicit ordered list of features to score for each organism group. The Python loader validates and flattens the hierarchy for scoring; the Explorer consumes the same hierarchy to group feature summaries and show the question and examples.
 
 ## Dimensions
 
@@ -41,4 +45,4 @@ Some current questions still need subject-matter review for overlap or scope. Ex
 
 ## Versioning
 
-`schema_version: 2` identifies the nested YAML structure. The catalogue's feature/question versions continue to identify scoring meaning. A structure-only move does not invalidate successful decisions; a changed feature meaning does. Domain profiles continue to control the applicable feature set and its order.
+`schema_version: 2` identifies the nested YAML structure. The catalogue is now `multi-domain-features-v3.2`; this changes the feature prompt because the shared evidence frame and examples are now part of Jev's instructions. Previous v3.1 feature decisions therefore do not count as cached v3.2 decisions and will be rescored on the next Phase 3 run. Domain profiles continue to control the applicable feature set and its order. The Phase 3 cost estimate was raised to account for the larger feature instructions.

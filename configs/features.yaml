@@ -1,9 +1,10 @@
 schema_version: 2
 id: pathogen_atlas_features
-version: multi-domain-features-v3.1
+version: multi-domain-features-v3.2
 answer_type: noul
-review_note: Inherited and domain-specific features are provisional pending subject-matter review and labelled pilot
-  evaluation. Provisional profiles may be used only for bounded pilot runs.
+review_note: Feature questions share a common human-disease evidence frame. Per-feature inclusion and exclusion
+  examples are schematic guidance, not claims about specific published studies. Features remain provisional pending
+  subject-matter review and labelled pilot evaluation.
 dimensions:
   pathogen_biology:
     label: Pathogen biology
@@ -18,7 +19,7 @@ dimensions:
             label: ANAEROBIC
             definition: is the pathgen a (facultative) anaerobe?
             answer_type: noul
-            question_version: v3.1-anaerobic
+            question_version: v3.2-anaerobic
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -29,12 +30,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named bacterium is described as an anaerobic or facultatively anaerobic
+              organism”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named bacterium is described
+              as an anaerobic or facultatively anaerobic organism.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions anaerobic only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named bacterium is described as an anaerobic or facultatively anaerobic organism
           biofilm:
             feature_id: biofilm
             label: BIOFILM
             definition: does the pathogen form a biofilm (on mucal surfaces or implants)?
             answer_type: noul
-            question_version: v3.1-biofilm
+            question_version: v3.2-biofilm
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -45,12 +56,21 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species forms a biofilm in the human infection context”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species forms a biofilm
+              in the human infection context.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions biofilm only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species forms a biofilm in the human infection context
           multidrug_resistance:
             feature_id: multidrug_resistance
             label: MULTIDRUG RESISTANCE
             definition: is the pathogen resistant to multiple antibiotics?
             answer_type: noul
-            question_version: v3.1-multidrug_resistance
+            question_version: v3.2-multidrug_resistance
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -61,12 +81,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported to be resistant to multiple antibiotics”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported to
+              be resistant to multiple antibiotics.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions multidrug resistance only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named species is reported to be resistant to multiple antibiotics
           sporeforming:
             feature_id: sporeforming
             label: SPOREFORMING
             definition: is the pahogen capable of producing spores or dormant cells?
             answer_type: noul
-            question_version: v3.1-sporeforming
+            question_version: v3.2-sporeforming
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -77,12 +107,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named bacterial species is reported to form spores or dormant cells”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named bacterial species is reported
+              to form spores or dormant cells.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions sporeforming only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named bacterial species is reported to form spores or dormant cells
           toxins:
             feature_id: toxins
             label: TOXINS
             definition: are symptoms caused by (endo)toxins?
             answer_type: noul
-            question_version: v3.1-toxins
+            question_version: v3.2-toxins
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -93,13 +133,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the human illness is attributed to toxins produced by the named species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the human illness is attributed
+              to toxins produced by the named species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions toxins only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the human illness is attributed to toxins produced by the named species
           fungal_morphology:
             feature_id: fungal_morphology
             label: FUNGAL MORPHOLOGY
             definition: Does the abstract describe the organism as a yeast, mould, or dimorphic fungus in the disease
               context?
             answer_type: noul
-            question_version: v3.1-fungal_morphology
+            question_version: v3.2-fungal_morphology
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -110,6 +159,18 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named fungus is described as a yeast, mould, or dimorphic fungus in the
+              disease report”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named fungus is described as
+              a yeast, mould, or dimorphic fungus in the disease report.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions fungal morphology only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named fungus is described as a yeast, mould, or dimorphic fungus in the disease
+              report
       infection_course:
         label: Infection course
         description: Carriage, latency, or persistence over the course of infection.
@@ -119,7 +180,7 @@ dimensions:
             label: ASYMPTOMATIC CARRIAGE
             definition: was the pathogen present but not causing infection prior?
             answer_type: noul
-            question_version: v3.1-asymptomatic_carriage
+            question_version: v3.2-asymptomatic_carriage
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -130,12 +191,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported as present in a human host without causing symptoms
+              or infection at that time”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported as
+              present in a human host without causing symptoms or infection at that time.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions asymptomatic carriage only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named species is reported as present in a human host without causing symptoms or
+              infection at that time
           viral_latency:
             feature_id: viral_latency
             label: VIRAL LATENCY
             definition: Does the abstract report latency or reactivation of infection caused by the named virus?
             answer_type: noul
-            question_version: v3.1-viral_latency
+            question_version: v3.2-viral_latency
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -146,12 +219,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “infection with the named virus is reported to become latent or reactivate
+              in a human host”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “infection with the named virus is
+              reported to become latent or reactivate in a human host.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions viral latency only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: infection with the named virus is reported to become latent or reactivate in a human
+              host
           persistent_viral_infection:
             feature_id: persistent_viral_infection
             label: PERSISTENT VIRAL INFECTION
             definition: Does the abstract report persistent infection with the named virus?
             answer_type: noul
-            question_version: v3.1-persistent_viral_infection
+            question_version: v3.2-persistent_viral_infection
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -161,6 +246,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “persistent infection with the named virus is reported in a human host”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “persistent infection with the named
+              virus is reported in a human host.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions persistent viral infection only as background,
+              or only for another organism or a non-human setting, without explicitly reporting it for the named
+              species in human disease.'
+            question_claim: persistent infection with the named virus is reported in a human host
       treatment_response:
         label: Treatment response
         description: Resistance or reduced susceptibility relevant to treatment.
@@ -170,7 +265,7 @@ dimensions:
             label: ANTIFUNGAL RESISTANCE
             definition: Does the abstract report resistance of the fungus to antifungal treatment?
             answer_type: noul
-            question_version: v3.1-antifungal_resistance
+            question_version: v3.2-antifungal_resistance
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -180,12 +275,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named fungus is reported to be resistant to antifungal treatment”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named fungus is reported to
+              be resistant to antifungal treatment.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions antifungal resistance only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named fungus is reported to be resistant to antifungal treatment
           antiviral_resistance:
             feature_id: antiviral_resistance
             label: ANTIVIRAL RESISTANCE
             definition: Does the abstract report resistance of the named virus to antiviral treatment?
             answer_type: noul
-            question_version: v3.1-antiviral_resistance
+            question_version: v3.2-antiviral_resistance
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -195,6 +300,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named virus is reported to be resistant to antiviral treatment”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named virus is reported to be
+              resistant to antiviral treatment.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions antiviral resistance only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named virus is reported to be resistant to antiviral treatment
   transmission:
     label: Transmission
     description: Routes or patterns by which the organism or infection spreads between hosts.
@@ -208,7 +323,7 @@ dimensions:
             label: AIRBORNE
             definition: was the infection acquired due to inhalation of cells, aerosols or droplets in the air?
             answer_type: noul
-            question_version: v3.1-airborne
+            question_version: v3.2-airborne
             organism_groups:
             - bacteria
             - fungi
@@ -221,12 +336,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to have been acquired by
+              inhaling infectious cells, aerosols, or droplets”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to have been acquired by inhaling infectious cells, aerosols, or droplets.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions airborne only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to have been acquired by inhaling
+              infectious cells, aerosols, or droplets
           bite:
             feature_id: bite
             label: BITE
             definition: is the infection associated with an animal bite or wound (such as from a dog, rat or reptile)?
             answer_type: noul
-            question_version: v3.1-bite
+            question_version: v3.2-bite
             organism_groups:
             - bacteria
             - fungi
@@ -239,12 +365,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with an
+              animal bite”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with an animal bite.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions bite only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with an animal bite
           direct_contact:
             feature_id: direct_contact
             label: DIRECT CONTACT
             definition: can the infection be transmitted via human-to-human contact (touch)?
             answer_type: noul
-            question_version: v3.1-direct_contact
+            question_version: v3.2-direct_contact
             organism_groups:
             - bacteria
             - fungi
@@ -257,12 +393,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to spread through direct
+              person-to-person physical contact”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to spread through direct person-to-person physical contact.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions direct contact only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported to spread through direct person-to-person
+              physical contact
           fecal_oral:
             feature_id: fecal_oral
             label: FECAL-ORAL
             definition: was the infection acquired via the faecal-oral route (i.e. unsanitary conditions)?
             answer_type: noul
-            question_version: v3.1-fecal_oral
+            question_version: v3.2-fecal_oral
             organism_groups:
             - bacteria
             - fungi
@@ -275,12 +423,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to spread by the faecal–oral
+              route”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to spread by the faecal–oral route.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions fecal-oral only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to spread by the faecal–oral route
           fomite:
             feature_id: fomite
             label: FOMITE
             definition: was the infecion acquired via physical contact with an inanimate object?
             answer_type: noul
-            question_version: v3.1-fomite
+            question_version: v3.2-fomite
             organism_groups:
             - bacteria
             - fungi
@@ -293,12 +451,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to spread through a contaminated
+              inanimate object”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to spread through a contaminated inanimate object.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions fomite only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to spread through a contaminated
+              inanimate object
           foodborne:
             feature_id: foodborne
             label: FOODBORNE
             definition: was the infection acquired through the ingestion of food or drink?
             answer_type: noul
-            question_version: v3.1-foodborne
+            question_version: v3.2-foodborne
             organism_groups:
             - bacteria
             - fungi
@@ -311,12 +480,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to have been acquired by
+              consuming contaminated food or drink”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to have been acquired by consuming contaminated food or drink.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions foodborne only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to have been acquired by consuming
+              contaminated food or drink
           sexually_transmitted:
             feature_id: sexually_transmitted
             label: SEXUALLY TRANSMITTED
             definition: is the infection associated with sexual contact?
             answer_type: noul
-            question_version: v3.1-sexually_transmitted
+            question_version: v3.2-sexually_transmitted
             organism_groups:
             - bacteria
             - fungi
@@ -329,12 +509,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to spread through sexual
+              contact”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to spread through sexual contact.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions sexually transmitted only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: human infection with the named species is reported to spread through sexual contact
           vectorborne:
             feature_id: vectorborne
             label: VECTORBORNE
             definition: is the disease transmitted by blood-feeding anthropods such as mosquitoes, ticks or fleas?
             answer_type: noul
-            question_version: v3.1-vectorborne
+            question_version: v3.2-vectorborne
             organism_groups:
             - bacteria
             - fungi
@@ -347,12 +538,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to be transmitted by a
+              blood-feeding arthropod vector”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to be transmitted by a blood-feeding arthropod vector.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions vectorborne only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported to be transmitted by a blood-feeding
+              arthropod vector
           vertical:
             feature_id: vertical
             label: VERTICAL
             definition: can the infection be transmitted from mother to child?
             answer_type: noul
-            question_version: v3.1-vertical
+            question_version: v3.2-vertical
             organism_groups:
             - bacteria
             - fungi
@@ -365,12 +568,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “transmission of the named species from a mother to her child is reported in
+              humans”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “transmission of the named species
+              from a mother to her child is reported in humans.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions vertical only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: transmission of the named species from a mother to her child is reported in humans
           waterborne:
             feature_id: waterborne
             label: WATERBORNE
             definition: was the infection acquired through contact with contaminated water?
             answer_type: noul
-            question_version: v3.1-waterborne
+            question_version: v3.2-waterborne
             organism_groups:
             - bacteria
             - fungi
@@ -383,12 +596,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to have been acquired through
+              contaminated water”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to have been acquired through contaminated water.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions waterborne only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to have been acquired through contaminated
+              water
           wound:
             feature_id: wound
             label: WOUND
             definition: is the infection assciated with a wound resulting from an accident (but not a bite)?
             answer_type: noul
-            question_version: v3.1-wound
+            question_version: v3.2-wound
             organism_groups:
             - bacteria
             - fungi
@@ -401,12 +625,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with an
+              accidental wound that was not caused by an animal bite”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with an accidental wound that was not caused by an animal bite.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions wound only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with an accidental
+              wound that was not caused by an animal bite
           zoonosis:
             feature_id: zoonosis
             label: ZOONOSIS
             definition: is the disease transmissable from vertebrate animals to humans?
             answer_type: noul
-            question_version: v3.1-zoonosis
+            question_version: v3.2-zoonosis
             organism_groups:
             - bacteria
             - fungi
@@ -419,12 +654,21 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “transmission of the named species from a vertebrate animal to a human is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “transmission of the named species
+              from a vertebrate animal to a human is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions zoonosis only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: transmission of the named species from a vertebrate animal to a human is reported
           viral_spillover:
             feature_id: viral_spillover
             label: VIRAL SPILLOVER
             definition: Does the abstract report transmission of the named virus from an animal host to humans?
             answer_type: noul
-            question_version: v3.1-viral_spillover
+            question_version: v3.2-viral_spillover
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -435,12 +679,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “transmission of the named virus from an animal host to a human is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “transmission of the named virus
+              from an animal host to a human is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions viral spillover only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: transmission of the named virus from an animal host to a human is reported
           viral_vector:
             feature_id: viral_vector
             label: VIRAL VECTOR
             definition: Does the abstract report transmission of the named virus through an arthropod vector?
             answer_type: noul
-            question_version: v3.1-viral_vector
+            question_version: v3.2-viral_vector
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -451,6 +705,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “transmission of the named virus to humans through an arthropod vector is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “transmission of the named virus
+              to humans through an arthropod vector is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions viral vector only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: transmission of the named virus to humans through an arthropod vector is reported
       transmission_patterns:
         label: Transmission patterns
         description: Sustained or population-level patterns of transmission.
@@ -460,7 +724,7 @@ dimensions:
             label: SUSTAINED HUMAN TRANSMISSION
             definition: Does the abstract report sustained human-to-human transmission of the named virus?
             answer_type: noul
-            question_version: v3.1-sustained_human_transmission
+            question_version: v3.2-sustained_human_transmission
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -471,12 +735,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “sustained person-to-person transmission of the named virus is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “sustained person-to-person transmission
+              of the named virus is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions sustained human transmission only as background,
+              or only for another organism or a non-human setting, without explicitly reporting it for the named
+              species in human disease.'
+            question_claim: sustained person-to-person transmission of the named virus is reported
           viral_shedding:
             feature_id: viral_shedding
             label: VIRAL SHEDDING
             definition: Does the abstract report shedding of the named virus by an infected host?
             answer_type: noul
-            question_version: v3.1-viral_shedding
+            question_version: v3.2-viral_shedding
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -486,6 +760,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “shedding of the named virus by an infected human host is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “shedding of the named virus by an
+              infected human host is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions viral shedding only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: shedding of the named virus by an infected human host is reported
   reservoir_exposure:
     label: Reservoirs and exposure
     description: Animal or environmental reservoirs and exposure settings associated with human infection.
@@ -499,7 +783,7 @@ dimensions:
             label: AIR
             definition: is the pathogen species associated with the air, aerosols, vents, ducts, smoke or dust?
             answer_type: noul
-            question_version: v3.1-air
+            question_version: v3.2-air
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -510,13 +794,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with air, aerosols, vents, ducts,
+              smoke, or dust relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with air, aerosols, vents, ducts, smoke, or dust relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions air only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with air, aerosols, vents, ducts, smoke,
+              or dust relevant to human infection
           freshwater:
             feature_id: freshwater
             label: FRESHWATER
             definition: is the pathogen species associated with lakes, rivers, streams, reservoirs, water storage
               units/tanks, waterpipes or other freshwater sources?
             answer_type: noul
-            question_version: v3.1-freshwater
+            question_version: v3.2-freshwater
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -527,13 +822,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with freshwater sources relevant
+              to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with freshwater sources relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions freshwater only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with freshwater sources relevant to human
+              infection
           marine:
             feature_id: marine
             label: MARINE
             definition: is the pathogen species associated with coastal environments, the ocean, the sea, the beach
               or estuaries?
             answer_type: noul
-            question_version: v3.1-marine
+            question_version: v3.2-marine
             organism_groups:
             - bacteria
             - fungi
@@ -546,13 +852,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with a marine or coastal environment
+              relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with a marine or coastal environment relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions marine only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with a marine or coastal environment relevant
+              to human infection
           plants:
             feature_id: plants
             label: PLANTS
             definition: is the pathogen species associated with plants, crops, fruits, seeds, nuts, vegetables or
               vegetable matter?
             answer_type: noul
-            question_version: v3.1-plants
+            question_version: v3.2-plants
             organism_groups:
             - bacteria
             - fungi
@@ -565,13 +882,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with plants or plant material
+              relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with plants or plant material relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions plants only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with plants or plant material relevant
+              to human infection
           precipitation:
             feature_id: precipitation
             label: PRECIPITATION
             definition: is the pathogen associated with rain, aerosols and/or extreme weather events such as flooding,
               hurricanes or storms?
             answer_type: noul
-            question_version: v3.1-precipitation
+            question_version: v3.2-precipitation
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -582,12 +910,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with precipitation or a related
+              extreme weather event relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with precipitation or a related extreme weather event relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions precipitation only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is reported in association with precipitation or a related extreme
+              weather event relevant to human infection
           sewage:
             feature_id: sewage
             label: SEWAGE
             definition: is the pathogen associated with sewage, septic tanks, slurry or agricultural run-off?
             answer_type: noul
-            question_version: v3.1-sewage
+            question_version: v3.2-sewage
             organism_groups:
             - bacteria
             - fungi
@@ -600,12 +940,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with sewage, septic material,
+              slurry, or agricultural runoff relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with sewage, septic material, slurry, or agricultural runoff relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions sewage only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with sewage, septic material, slurry, or
+              agricultural runoff relevant to human infection
           soil:
             feature_id: soil
             label: SOIL
             definition: is the pathogen species associated with soils or sediments?
             answer_type: noul
-            question_version: v3.1-soil
+            question_version: v3.2-soil
             organism_groups:
             - bacteria
             - fungi
@@ -618,13 +969,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with soil or sediment relevant
+              to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with soil or sediment relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions soil only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with soil or sediment relevant to human
+              infection
           temperature:
             feature_id: temperature
             label: TEMPERATURE
             definition: is the pathogen associated with increases in temperature, and/or extreme weather events
               such as heatwaves or wildfires?
             answer_type: noul
-            question_version: v3.1-temperature
+            question_version: v3.2-temperature
             organism_groups:
             - bacteria
             - fungi
@@ -637,12 +999,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with high temperature or a related
+              extreme heat event relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with high temperature or a related extreme heat event relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions temperature only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is reported in association with high temperature or a related extreme
+              heat event relevant to human infection
           fungal_spore_exposure:
             feature_id: fungal_spore_exposure
             label: FUNGAL SPORE EXPOSURE
             definition: Does the abstract link human infection to exposure to fungal spores?
             answer_type: noul
-            question_version: v3.1-fungal_spore_exposure
+            question_version: v3.2-fungal_spore_exposure
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -652,6 +1026,18 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named fungus is reported in association with exposure
+              to its spores”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named fungus
+              is reported in association with exposure to its spores.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions fungal spore exposure only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: human infection with the named fungus is reported in association with exposure to its
+              spores
       animal_reservoirs:
         label: Animal reservoirs
         description: Animal groups associated with the organism or human infection.
@@ -661,7 +1047,7 @@ dimensions:
             label: ANIMAL CONTACT
             definition: can the infection be transmitted via contact with animals (wild, domesticated or pets)?
             answer_type: noul
-            question_version: v3.1-animal_contact
+            question_version: v3.2-animal_contact
             organism_groups:
             - bacteria
             - fungi
@@ -674,12 +1060,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with contact
+              with an animal”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with contact with an animal.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions animal contact only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported in association with contact with
+              an animal
           aquatic_vertebrates:
             feature_id: aquatic_vertebrates
             label: AQUATIC VERTEBRATES
             definition: is the pathogen associated with fish or amphibians?
             answer_type: noul
-            question_version: v3.1-aquatic_vertebrates
+            question_version: v3.2-aquatic_vertebrates
             organism_groups:
             - bacteria
             - fungi
@@ -692,12 +1090,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with fish or amphibians relevant
+              to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with fish or amphibians relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions aquatic vertebrates only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named species is reported in association with fish or amphibians relevant to human
+              infection
           birds:
             feature_id: birds
             label: BIRDS
             definition: is the pathogen associated with birds, either wild or domesticated (chickens, ducks, poultry)?
             answer_type: noul
-            question_version: v3.1-birds
+            question_version: v3.2-birds
             organism_groups:
             - bacteria
             - fungi
@@ -710,12 +1120,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with wild or domesticated birds
+              relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with wild or domesticated birds relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions birds only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with wild or domesticated birds relevant
+              to human infection
           domesticated_animals:
             feature_id: domesticated_animals
             label: DOMESTICATED ANIMALS
             definition: is the pathogen associated with livestock such as cattle, pigs, chickens or sheep?
             answer_type: noul
-            question_version: v3.1-domesticated_animals
+            question_version: v3.2-domesticated_animals
             organism_groups:
             - bacteria
             - fungi
@@ -728,12 +1149,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with livestock or other domesticated
+              farm animals relevant to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with livestock or other domesticated farm animals relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions domesticated animals only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named species is reported in association with livestock or other domesticated farm
+              animals relevant to human infection
           invertebrates:
             feature_id: invertebrates
             label: INVERTEBRATES
             definition: is the pathogen associated with invertebrates such as shellfish, insects or arthropods?
             answer_type: noul
-            question_version: v3.1-invertebrates
+            question_version: v3.2-invertebrates
             organism_groups:
             - bacteria
             - fungi
@@ -746,13 +1179,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with invertebrates relevant to
+              human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with invertebrates relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions invertebrates only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is reported in association with invertebrates relevant to human infection
           mammals:
             feature_id: mammals
             label: MAMMALS
             definition: is the pathogen associated with any (wild) mammal such as rats, rodents, deer, monkeys or
               bats?
             answer_type: noul
-            question_version: v3.1-mammals
+            question_version: v3.2-mammals
             organism_groups:
             - bacteria
             - fungi
@@ -765,12 +1209,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with a mammal relevant to human
+              infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with a mammal relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions mammals only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with a mammal relevant to human infection
           pets:
             feature_id: pets
             label: PETS
             definition: is the pathogen associated with companion animals such as cats, dogs or hamsters?
             answer_type: noul
-            question_version: v3.1-pets
+            question_version: v3.2-pets
             organism_groups:
             - bacteria
             - fungi
@@ -783,12 +1237,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with a companion animal relevant
+              to human infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with a companion animal relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions pets only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with a companion animal relevant to human
+              infection
           reptiles:
             feature_id: reptiles
             label: REPTILES
             definition: is the pathogen associated with reptiles such as snakes or turtles?
             answer_type: noul
-            question_version: v3.1-reptiles
+            question_version: v3.2-reptiles
             organism_groups:
             - bacteria
             - fungi
@@ -801,6 +1266,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with a reptile relevant to human
+              infection”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with a reptile relevant to human infection.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions reptiles only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with a reptile relevant to human infection
   clinical_presentation:
     label: Clinical presentation
     description: Disease manifestations, affected systems, diagnostic findings, and co-occurring conditions.
@@ -814,7 +1289,7 @@ dimensions:
             label: BACTERAEMIA
             definition: was the pathogen detected in blood cultures?
             answer_type: noul
-            question_version: v3.1-bacteraemia
+            question_version: v3.2-bacteraemia
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -825,12 +1300,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is detected in blood cultures from a human infection or
+              disease case”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is detected in
+              blood cultures from a human infection or disease case.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions bacteraemia only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is detected in blood cultures from a human infection or disease case
           cardiovascular:
             feature_id: cardiovascular
             label: CARDIOVASCULAR
             definition: does the infection affect the bloodvessel system (such as heartvalves)?
             answer_type: noul
-            question_version: v3.1-cardiovascular
+            question_version: v3.2-cardiovascular
             organism_groups:
             - bacteria
             - fungi
@@ -843,12 +1329,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the cardiovascular
+              system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the cardiovascular system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions cardiovascular only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported to affect the cardiovascular system
           cutaneous:
             feature_id: cutaneous
             label: CUTANEOUS
             definition: does the infection affect the skin  (such as cellulitis)?
             answer_type: noul
-            question_version: v3.1-cutaneous
+            question_version: v3.2-cutaneous
             organism_groups:
             - bacteria
             - fungi
@@ -861,12 +1358,21 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the skin”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the skin.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions cutaneous only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to affect the skin
           digestive:
             feature_id: digestive
             label: DIGESTIVE
             definition: does the infection affect the gastro-intestimal system (such as the gut)?
             answer_type: noul
-            question_version: v3.1-digestive
+            question_version: v3.2-digestive
             organism_groups:
             - bacteria
             - fungi
@@ -879,12 +1385,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the digestive
+              system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the digestive system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions digestive only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to affect the digestive system
           endocrine:
             feature_id: endocrine
             label: ENDOCRINE
             definition: does the infection affect glands (such as the thyroid glands)?
             answer_type: noul
-            question_version: v3.1-endocrine
+            question_version: v3.2-endocrine
             organism_groups:
             - bacteria
             - fungi
@@ -897,12 +1413,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect an endocrine
+              gland or system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect an endocrine gland or system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions endocrine only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to affect an endocrine gland or system
           lymphatic:
             feature_id: lymphatic
             label: LYMPHATIC
             definition: does the infection affect the lymphatic system (such as the lymph nodes)?
             answer_type: noul
-            question_version: v3.1-lymphatic
+            question_version: v3.2-lymphatic
             organism_groups:
             - bacteria
             - fungi
@@ -915,13 +1441,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the lymphatic
+              system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the lymphatic system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions lymphatic only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to affect the lymphatic system
           musculoskeletal:
             feature_id: musculoskeletal
             label: MUSCULOSKELETAL
             definition: does the infection affect the muscular system (such as myositis) or the skeletal system
               (such as osteomyelitis)?
             answer_type: noul
-            question_version: v3.1-musculoskeletal
+            question_version: v3.2-musculoskeletal
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -932,12 +1468,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect muscle, bone,
+              or another musculoskeletal structure”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect muscle, bone, or another musculoskeletal structure.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions musculoskeletal only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: human infection with the named species is reported to affect muscle, bone, or another
+              musculoskeletal structure
           neurological:
             feature_id: neurological
             label: NEUROLOGICAL
             definition: does the infection affect the nervous system (such as the brain)?
             answer_type: noul
-            question_version: v3.1-neurological
+            question_version: v3.2-neurological
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -948,12 +1496,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the nervous system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the nervous system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions neurological only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported to affect the nervous system
           reproductive:
             feature_id: reproductive
             label: REPRODUCTIVE
             definition: does the infection affect the male or female reproductive system (such as the vagina)?
             answer_type: noul
-            question_version: v3.1-reproductive
+            question_version: v3.2-reproductive
             organism_groups:
             - bacteria
             - fungi
@@ -966,12 +1524,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the reproductive
+              system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the reproductive system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions reproductive only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported to affect the reproductive system
           respiratory:
             feature_id: respiratory
             label: RESPIRATORY
             definition: does the infection affect the respiratory system (such as the lungs)?
             answer_type: noul
-            question_version: v3.1-respiratory
+            question_version: v3.2-respiratory
             organism_groups:
             - bacteria
             - fungi
@@ -984,13 +1553,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the respiratory
+              system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the respiratory system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions respiratory only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported to affect the respiratory system
           systemic:
             feature_id: systemic
             label: SYSTEMIC
             definition: does the infection affect the entire body, rather than a single organ or body part (for
               instance blood, e.g. sepsis)?
             answer_type: noul
-            question_version: v3.1-systemic
+            question_version: v3.2-systemic
             organism_groups:
             - bacteria
             - fungi
@@ -1003,12 +1583,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported as systemic or affecting
+              the body beyond a single localized site”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported as systemic or affecting the body beyond a single localized site.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions systemic only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported as systemic or affecting the body
+              beyond a single localized site
           urinary:
             feature_id: urinary
             label: URINARY
             definition: does the infection affect the urinary system (such as the urinary tract)?
             answer_type: noul
-            question_version: v3.1-urinary
+            question_version: v3.2-urinary
             organism_groups:
             - bacteria
             - fungi
@@ -1021,6 +1612,15 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported to affect the urinary system”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported to affect the urinary system.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions urinary only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported to affect the urinary system
       coinfection_and_dysbiosis:
         label: Coinfection and microbial communities
         description: Co-detection, polymicrobial infection, or disruption of microbial communities.
@@ -1031,7 +1631,7 @@ dimensions:
             definition: is the presence of the pathogen associated with an imbalance in bacterial composition, changes
               in bacterial metabolic activities, or changes in bacterial distribution?
             answer_type: noul
-            question_version: v3.1-dysbiosis
+            question_version: v3.2-dysbiosis
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1042,13 +1642,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is reported in association with a change or imbalance in
+              the human microbiota in a disease context”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is reported in
+              association with a change or imbalance in the human microbiota in a disease context.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions dysbiosis only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is reported in association with a change or imbalance in the human
+              microbiota in a disease context
           microbiome:
             feature_id: microbiome
             label: MICROBIOME
             definition: is the species discussed in human microbiome sequencing studies that assess whether its
               presence or abundance is positively or negatively correlated with a noncommunicable disease?
             answer_type: noul
-            question_version: v3.1-microbiome
+            question_version: v3.2-microbiome
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1059,12 +1670,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “a human microbiome study reports an association between the named species
+              and a noncommunicable disease”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “a human microbiome study reports
+              an association between the named species and a noncommunicable disease.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions microbiome only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: a human microbiome study reports an association between the named species and a noncommunicable
+              disease
           polymicrobial:
             feature_id: polymicrobial
             label: POLYMICROBIAL
             definition: are multiple pathogens associated with the infection site?
             answer_type: noul
-            question_version: v3.1-polymicrobial
+            question_version: v3.2-polymicrobial
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1075,6 +1697,18 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the human infection site is reported to contain the named species together
+              with at least one other pathogen”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the human infection site is reported
+              to contain the named species together with at least one other pathogen.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions polymicrobial only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the human infection site is reported to contain the named species together with at least
+              one other pathogen
       diagnostic_and_specimen_findings:
         label: Diagnostic and specimen findings
         description: Detection in specified clinical specimens or normally sterile sites.
@@ -1084,7 +1718,7 @@ dimensions:
             label: STERILE SITE
             definition: is the infection site normally sterile (e.g. spinal fluid)?
             answer_type: noul
-            question_version: v3.1-sterile_site
+            question_version: v3.2-sterile_site
             organism_groups:
             - bacteria
             - fungi
@@ -1097,6 +1731,17 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is detected at a normally sterile site in a human disease
+              case”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is detected at
+              a normally sterile site in a human disease case.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions sterile site only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is detected at a normally sterile site in a human disease case
       disease_manifestations:
         label: Disease manifestations
         description: Specific forms of disease attributed to the organism.
@@ -1107,7 +1752,7 @@ dimensions:
             definition: Does the abstract describe superficial, cutaneous, subcutaneous, invasive, or disseminated
               fungal disease?
             answer_type: noul
-            question_version: v3.1-fungal_disease_form
+            question_version: v3.2-fungal_disease_form
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -1118,12 +1763,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human disease caused by the named fungus is reported as superficial, cutaneous,
+              subcutaneous, invasive, or disseminated”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human disease caused by the named
+              fungus is reported as superficial, cutaneous, subcutaneous, invasive, or disseminated.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions fungal disease form only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: human disease caused by the named fungus is reported as superficial, cutaneous, subcutaneous,
+              invasive, or disseminated
           fungal_allergy:
             feature_id: fungal_allergy
             label: FUNGAL ALLERGY
             definition: Does the abstract attribute allergic disease to the named fungus?
             answer_type: noul
-            question_version: v3.1-fungal_allergy
+            question_version: v3.2-fungal_allergy
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -1133,12 +1790,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “allergic disease in a human is attributed to the named fungus”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “allergic disease in a human is attributed
+              to the named fungus.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions fungal allergy only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: allergic disease in a human is attributed to the named fungus
           mycotoxin_illness:
             feature_id: mycotoxin_illness
             label: MYCOTOXIN ILLNESS
             definition: Does the abstract attribute human illness to a toxin produced by the named fungus?
             answer_type: noul
-            question_version: v3.1-mycotoxin_illness
+            question_version: v3.2-mycotoxin_illness
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -1148,6 +1815,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human illness is attributed to a mycotoxin produced by the named fungus”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human illness is attributed to a
+              mycotoxin produced by the named fungus.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions mycotoxin illness only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: human illness is attributed to a mycotoxin produced by the named fungus
   host_factors:
     label: Host factors
     description: Patient characteristics, conditions, behaviours, and host susceptibility.
@@ -1161,7 +1838,7 @@ dimensions:
             label: ALCOHOL
             definition: does the infected patient suffer from alcoholism?
             answer_type: noul
-            question_version: v3.1-alcohol
+            question_version: v3.2-alcohol
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1172,12 +1849,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “alcohol use disorder or alcoholism is reported for the human patient with
+              disease involving the named species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “alcohol use disorder or alcoholism
+              is reported for the human patient with disease involving the named species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions alcohol only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: alcohol use disorder or alcoholism is reported for the human patient with disease involving
+              the named species
           cystic_fibrosis:
             feature_id: cystic_fibrosis
             label: CYSTIC FIBROSIS
             definition: does the infected patient suffer from the underlying condition cystic fibrosis?
             answer_type: noul
-            question_version: v3.1-cystic_fibrosis
+            question_version: v3.2-cystic_fibrosis
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1188,12 +1876,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “cystic fibrosis is reported for the human patient with disease involving the
+              named species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “cystic fibrosis is reported for
+              the human patient with disease involving the named species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions cystic fibrosis only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: cystic fibrosis is reported for the human patient with disease involving the named species
           diabetes:
             feature_id: diabetes
             label: DIABETES
             definition: does the infected patient suffer from the underlying condition diabetes?
             answer_type: noul
-            question_version: v3.1-diabetes
+            question_version: v3.2-diabetes
             organism_groups:
             - bacteria
             - fungi
@@ -1206,12 +1905,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “diabetes is reported for the human patient with disease involving the named
+              species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “diabetes is reported for the human
+              patient with disease involving the named species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions diabetes only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: diabetes is reported for the human patient with disease involving the named species
           drugs:
             feature_id: drugs
             label: DRUGS
             definition: is the infected patient an (intravenous) drug user?
             answer_type: noul
-            question_version: v3.1-drugs
+            question_version: v3.2-drugs
             organism_groups:
             - bacteria
             - fungi
@@ -1224,12 +1933,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “intravenous or other drug use is reported for the human patient with disease
+              involving the named species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “intravenous or other drug use is
+              reported for the human patient with disease involving the named species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions drugs only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: intravenous or other drug use is reported for the human patient with disease involving
+              the named species
           immunocompromised:
             feature_id: immunocompromised
             label: IMMUNOCOMPROMISED
             definition: is the infected patient immunocompromised or not immunocompetent?
             answer_type: noul
-            question_version: v3.1-immunocompromised
+            question_version: v3.2-immunocompromised
             organism_groups:
             - bacteria
             - fungi
@@ -1242,13 +1962,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the human patient with disease involving the named species is reported to
+              be immunocompromised”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the human patient with disease involving
+              the named species is reported to be immunocompromised.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions immunocompromised only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the human patient with disease involving the named species is reported to be immunocompromised
           immunosuppressed:
             feature_id: immunosuppressed
             label: IMMUNOSUPPRESSED
             definition: is he epatient immunocompromised, for example as the result of undergoing chemotherapy or
               radiotherapy?
             answer_type: noul
-            question_version: v3.1-immunosuppressed
+            question_version: v3.2-immunosuppressed
             organism_groups:
             - bacteria
             - fungi
@@ -1261,12 +1992,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the human patient with disease involving the named species is reported to
+              be immunosuppressed, for example by treatment”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the human patient with disease involving
+              the named species is reported to be immunosuppressed, for example by treatment.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions immunosuppressed only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the human patient with disease involving the named species is reported to be immunosuppressed,
+              for example by treatment
           opportunistic:
             feature_id: opportunistic
             label: OPPORTUNISTIC
             definition: is the pathogen referred to as being opportunistic?
             answer_type: noul
-            question_version: v3.1-opportunistic
+            question_version: v3.2-opportunistic
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1277,12 +2020,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is explicitly characterized as an opportunistic pathogen
+              in a human disease context”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is explicitly
+              characterized as an opportunistic pathogen in a human disease context.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions opportunistic only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is explicitly characterized as an opportunistic pathogen in a human
+              disease context
           smoking:
             feature_id: smoking
             label: SMOKING
             definition: does the infected patient smoke tobacco?
             answer_type: noul
-            question_version: v3.1-smoking
+            question_version: v3.2-smoking
             organism_groups:
             - bacteria
             - fungi
@@ -1295,6 +2050,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “tobacco smoking is reported for the human patient with disease involving the
+              named species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “tobacco smoking is reported for
+              the human patient with disease involving the named species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions smoking only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: tobacco smoking is reported for the human patient with disease involving the named species
   healthcare_context:
     label: Healthcare context
     description: Healthcare-associated acquisition, care settings, devices, procedures, and clinical products.
@@ -1308,7 +2073,7 @@ dimensions:
             label: CATHETER
             definition: is the infection associated with a urinary cathether?
             answer_type: noul
-            question_version: v3.1-catheter
+            question_version: v3.2-catheter
             organism_groups:
             - bacteria
             - fungi
@@ -1321,13 +2086,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with a urinary
+              catheter”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with a urinary catheter.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions catheter only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with a urinary catheter
           intubation:
             feature_id: intubation
             label: INTUBATION
             definition: is the infection associated with the mouth, teeth, tongue, vocal cords or airway as a result
               of ventilation?
             answer_type: noul
-            question_version: v3.1-intubation
+            question_version: v3.2-intubation
             organism_groups:
             - bacteria
             - fungi
@@ -1340,6 +2115,17 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with intubation
+              or airway ventilation”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with intubation or airway ventilation.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions intubation only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with intubation or
+              airway ventilation
       care_and_procedures:
         label: Care and procedures
         description: Care settings and procedures associated with acquisition or disease.
@@ -1349,7 +2135,7 @@ dimensions:
             label: NOSOCOMIAL
             definition: is there evidence that the infection was healthcare associated (e.g. acquired in the hospital)?
             answer_type: noul
-            question_version: v3.1-nosocomial
+            question_version: v3.2-nosocomial
             organism_groups:
             - bacteria
             - fungi
@@ -1362,12 +2148,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported as acquired in a healthcare
+              setting”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported as acquired in a healthcare setting.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions nosocomial only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported as acquired in a healthcare setting
           operation:
             feature_id: operation
             label: OPERATION
             definition: is the infection associated with an operation?
             answer_type: noul
-            question_version: v3.1-operation
+            question_version: v3.2-operation
             organism_groups:
             - bacteria
             - fungi
@@ -1380,12 +2176,22 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with a surgical
+              operation”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with a surgical operation.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions operation only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with a surgical operation
           replacement:
             feature_id: replacement
             label: REPLACEMENT
             definition: is the infection associated with an implant (such as a hip- or heartvalve replacement)?
             answer_type: noul
-            question_version: v3.1-replacement
+            question_version: v3.2-replacement
             organism_groups:
             - bacteria
             - fungi
@@ -1398,12 +2204,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with an
+              implanted replacement device”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with an implanted replacement device.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions replacement only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: human infection with the named species is reported in association with an implanted
+              replacement device
           endogenous_fungal_overgrowth:
             feature_id: endogenous_fungal_overgrowth
             label: ENDOGENOUS FUNGAL OVERGROWTH
             definition: Does the abstract attribute human fungal disease to endogenous overgrowth or reactivation?
             answer_type: noul
-            question_version: v3.1-endogenous_fungal_overgrowth
+            question_version: v3.2-endogenous_fungal_overgrowth
             organism_groups:
             - fungi
             review_status: provisional_domain_specific
@@ -1414,6 +2232,18 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human fungal disease is attributed to endogenous overgrowth or reactivation
+              of the named fungus”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human fungal disease is attributed
+              to endogenous overgrowth or reactivation of the named fungus.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions endogenous fungal overgrowth only as background,
+              or only for another organism or a non-human setting, without explicitly reporting it for the named
+              species in human disease.'
+            question_claim: human fungal disease is attributed to endogenous overgrowth or reactivation of the named
+              fungus
       treatments_and_products:
         label: Treatments and products
         description: Clinical products or treatments mentioned in relation to infection.
@@ -1423,7 +2253,7 @@ dimensions:
             label: OINTMENT
             definition: is the infection associated with a dressing, salve or oitnment?
             answer_type: noul
-            question_version: v3.1-ointment
+            question_version: v3.2-ointment
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1434,6 +2264,17 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with a dressing,
+              salve, or ointment”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with a dressing, salve, or ointment.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions ointment only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with a dressing, salve,
+              or ointment
   epidemiology_public_health:
     label: Epidemiology and public health
     description: Population-level occurrence, public-health classification, prevention, and control.
@@ -1448,7 +2289,7 @@ dimensions:
             definition: is the pathogen discussed in the context of epidemiological surveillance or strategies and
               measures for monitoring, preventing, or controlling infectious-disease spread (public health interventions)?
             answer_type: noul
-            question_version: v3.1-epidemiology
+            question_version: v3.2-epidemiology
             organism_groups:
             - bacteria
             - fungi
@@ -1461,12 +2302,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is discussed in a human infectious-disease surveillance
+              or control context”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is discussed in
+              a human infectious-disease surveillance or control context.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions epidemiology only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the named species is discussed in a human infectious-disease surveillance or control
+              context
           outbreaks:
             feature_id: outbreaks
             label: OUTBREAKS
             definition: are multiple infections reported at the same time as the result of (local) clusters or outbreaks?
             answer_type: noul
-            question_version: v3.1-outbreaks
+            question_version: v3.2-outbreaks
             organism_groups:
             - bacteria
             - fungi
@@ -1479,6 +2332,17 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “multiple human infections involving the named species are reported as a linked
+              outbreak or cluster”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “multiple human infections involving
+              the named species are reported as a linked outbreak or cluster.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions outbreaks only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: multiple human infections involving the named species are reported as a linked outbreak
+              or cluster
       public_health_and_control:
         label: Public health and control
         description: Public-health priority, vaccination, prevention, and control.
@@ -1489,7 +2353,7 @@ dimensions:
             definition: is the pathogen species listed as an emerging infectious disease or as a species of high
               priority to public health?
             answer_type: noul
-            question_version: v3.1-priority_species
+            question_version: v3.2-priority_species
             organism_groups:
             - bacteria
             - fungi
@@ -1502,12 +2366,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is explicitly identified as an emerging infection threat
+              or public-health priority”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is explicitly
+              identified as an emerging infection threat or public-health priority.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions priority species only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the named species is explicitly identified as an emerging infection threat or public-health
+              priority
           vaccine:
             feature_id: vaccine
             label: VACCINE
             definition: is the pathogen mentioned in the context of immunization or vaccination?
             answer_type: noul
-            question_version: v3.1-vaccine
+            question_version: v3.2-vaccine
             organism_groups:
             - bacteria
             - fungi
@@ -1520,12 +2396,23 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named species is discussed in relation to vaccination or immunization
+              against its infection or disease”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named species is discussed in
+              relation to vaccination or immunization against its infection or disease.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions vaccine only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named species is discussed in relation to vaccination or immunization against its
+              infection or disease
           vaccine_breakthrough:
             feature_id: vaccine_breakthrough
             label: VACCINE BREAKTHROUGH
             definition: Does the abstract report infection or disease caused by the named virus after vaccination?
             answer_type: noul
-            question_version: v3.1-vaccine_breakthrough
+            question_version: v3.2-vaccine_breakthrough
             organism_groups:
             - viruses
             review_status: provisional_domain_specific
@@ -1536,6 +2423,18 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature for the named organism.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “infection or disease caused by the named virus is reported after vaccination
+              of the human patient”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “infection or disease caused by the
+              named virus is reported after vaccination of the human patient.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions vaccine breakthrough only as background, or
+              only for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: infection or disease caused by the named virus is reported after vaccination of the
+              human patient
   abstract_reporting:
     label: Abstract reporting
     description: Study or case descriptors reported in the abstract; these describe what was reported, not intrinsic
@@ -1550,7 +2449,7 @@ dimensions:
             label: GEOGRAPHY
             definition: does the abstract report the city, village, or country where the patient fell ill?
             answer_type: noul
-            question_version: v3.1-geography
+            question_version: v3.2-geography
             organism_groups:
             - bacteria
             - fungi
@@ -1563,13 +2462,25 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the abstract identifies the city, village, or country where the human patient
+              acquired or developed the disease involving the named species”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the abstract identifies the city,
+              village, or country where the human patient acquired or developed the disease involving the named
+              species.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions geography only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the abstract identifies the city, village, or country where the human patient acquired
+              or developed the disease involving the named species
           immunology:
             feature_id: immunology
             label: IMMUNOLOGY
             definition: is the bacterial species  referred to in the context of the host immune response, virulence
               factors or molecular interactions?
             answer_type: noul
-            question_version: v3.1-immunology
+            question_version: v3.2-immunology
             organism_groups:
             - bacteria
             review_status: inherited_v2_needs_review
@@ -1580,13 +2491,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the named bacterial species is discussed in relation to the human host immune
+              response or a specific host–pathogen interaction”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the named bacterial species is discussed
+              in relation to the human host immune response or a specific host–pathogen interaction.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions immunology only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: the named bacterial species is discussed in relation to the human host immune response
+              or a specific host–pathogen interaction
           patient_age:
             feature_id: patient_age
             label: PATIENT AGE
             definition: does the abstract report the infected patient's age or age group (neonate, child, adult,
               or elderly)?
             answer_type: noul
-            question_version: v3.1-patient_age
+            question_version: v3.2-patient_age
             organism_groups:
             - bacteria
             - fungi
@@ -1599,12 +2521,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the age or age group of a human patient with disease involving the named species
+              is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the age or age group of a human
+              patient with disease involving the named species is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions patient age only as background, or only for
+              another organism or a non-human setting, without explicitly reporting it for the named species in
+              human disease.'
+            question_claim: the age or age group of a human patient with disease involving the named species is
+              reported
           patient_occupation:
             feature_id: patient_occupation
             label: PATIENT OCCUPATION
             definition: does the abstract report the patient's job, role, or occupation?
             answer_type: noul
-            question_version: v3.1-patient_occupation
+            question_version: v3.2-patient_occupation
             organism_groups:
             - bacteria
             - fungi
@@ -1617,12 +2551,24 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “the job or occupation of a human patient with disease involving the named
+              species is reported”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “the job or occupation of a human
+              patient with disease involving the named species is reported.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions patient occupation only as background, or only
+              for another organism or a non-human setting, without explicitly reporting it for the named species
+              in human disease.'
+            question_claim: the job or occupation of a human patient with disease involving the named species is
+              reported
           recreation:
             feature_id: recreation
             label: RECREATION
             definition: is the infection mentioned in the context of outdoor activities such as swimming or hiking?
             answer_type: noul
-            question_version: v3.1-recreation
+            question_version: v3.2-recreation
             organism_groups:
             - bacteria
             - fungi
@@ -1635,3 +2581,16 @@ dimensions:
             criteria:
               'true': The title or abstract explicitly states or clearly supports the feature in the question definition.
               'false': The feature is absent, unsupported, relates to another organism/context, or requires inference.
+            question: 'In this abstract, is the following claim explicitly reported about the named species in the
+              human disease context: “human infection with the named species is reported in association with an
+              outdoor or recreational activity”?'
+            inclusion_examples:
+            - 'Example inclusion (schematic): The abstract explicitly reports: “human infection with the named species
+              is reported in association with an outdoor or recreational activity.”'
+            exclusion_examples:
+            - 'Example exclusion (schematic): The abstract mentions recreation only as background, or only for another
+              organism or a non-human setting, without explicitly reporting it for the named species in human disease.'
+            question_claim: human infection with the named species is reported in association with an outdoor or
+              recreational activity
+evidence_frame: 'In this abstract, is the following claim explicitly reported about the named species in the human
+  disease context: “{claim}”?'

@@ -81,6 +81,7 @@ def _response_rows(response: dict[str, Any], question_map: dict[str, dict[str, A
         rows.append({**base, "feature_id": qid, "p_yes": p_yes, "status": status, "error": error,
                      "dimension_id": question.get("dimension_id"), "dimension": question.get("dimension_label"),
                      "category_id": question.get("category_id"), "category": question.get("category"),
+                     "question": question.get("question"), "question_claim": question.get("question_claim"),
                      "definition": question.get("definition")})
     return rows
 
@@ -109,7 +110,8 @@ def _call_group(row: Any, *, kind: str, questions: dict[str, dict[str, Any]], ru
         status_rows = [{**base, "feature_id": qid, "p_yes": None, "status": "failed",
                         "error": f"{type(exc).__name__}: {exc}", "dimension_id": q.get("dimension_id"),
                         "dimension": q.get("dimension_label"), "category_id": q.get("category_id"),
-                        "category": q.get("category"), "definition": q.get("definition")} for qid, q in questions.items()]
+                        "category": q.get("category"), "question": q.get("question"),
+                        "question_claim": q.get("question_claim"), "definition": q.get("definition")} for qid, q in questions.items()]
         raw = {**base, "state": state, "questions": list(questions), "error": f"{type(exc).__name__}: {exc}", "recorded_at": datetime.now(timezone.utc).isoformat()}
     with _raw_lock:
         append_jsonl(raw_path, raw)

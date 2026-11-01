@@ -44,9 +44,11 @@ def load_feature_catalog(catalog_path: str | Path, profile_path: str | Path, *, 
     # scoring pipeline, where feature IDs are used as stable cache keys.
     catalog["features"] = features
     for feature_id, feature in features.items():
-        required = {"feature_id", "definition", "question_version", "organism_groups", "answer_type", "instructions", "criteria", "review_status", "dimension_id", "category_id"}
+        required = {"feature_id", "definition", "question", "question_claim", "inclusion_examples", "exclusion_examples", "question_version", "organism_groups", "answer_type", "instructions", "criteria", "review_status", "dimension_id", "category_id"}
         if required - set(feature):
             raise ValueError(f"Feature {feature_id!r} missing fields {sorted(required - set(feature))}.")
+        if not feature["inclusion_examples"] or not feature["exclusion_examples"]:
+            raise ValueError(f"Feature {feature_id!r} needs at least one inclusion and exclusion example.")
         if feature["answer_type"] != "noul":
             raise ValueError(f"Feature {feature_id!r} must use Jev noul type.")
     return catalog, profiles.get("profiles", {})
@@ -70,6 +72,13 @@ def questions_for_domain(catalog: dict[str, Any], profiles: dict[str, list[str]]
             "fungi": "Assess the named fungus only; distinguish infection from colonisation, environmental contamination, allergy, and toxin-only illness.",
             "viruses": "Assess the named virus only; distinguish active disease from exposure, serology, environmental detection, and mention of a related strain or subtype.",
         }[group]
-        instruction = f"{contextual_rule} {feature['instructions']}"
+        includes = " ".join(feature["inclusion_examples"])
+        excludes = " ".join(feature["exclusion_examples"])
+        instruction = (
+            f"{contextual_rule} {feature['instructions']} "
+            f"Apply this exact question: {feature['question']} "
+            f"Inclusion example: {includes} Exclusion example: {excludes} "
+            "Examples are schematic and not exhaustive. Use only the title and abstract; do not infer missing evidence."
+        )
         result[feature_id] = {**feature, "type": feature["answer_type"], "instructions": instruction}
     return result

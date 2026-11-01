@@ -73,6 +73,8 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     for fid, row in catalog["features"].items():
         feature_definitions[fid] = {
             "label": row.get("label", fid), "definition": row.get("definition", "") or "",
+            "question": row.get("question", "") or "", "question_claim": row.get("question_claim", "") or "",
+            "inclusion_examples": row.get("inclusion_examples", []), "exclusion_examples": row.get("exclusion_examples", []),
             "dimension_id": row["dimension_id"], "dimension": row["dimension_label"],
             "category_id": row["category_id"], "category": row["category_label"],
         }
