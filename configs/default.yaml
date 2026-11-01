@@ -67,9 +67,9 @@ decisions:
   retries: 3
   backoff_seconds: 1.0
   # Increase cautiously: the Jev upstream provider controls its own capacity.
-  # V2 completed a large Jev run with 128 workers; reduce if repeated upstream
-  # 429s or latency spikes appear.
-  max_workers: 128
+  # Experimental concurrency; reduce if repeated upstream 429s or latency
+  # spikes appear. V2 completed a large Jev run with 128 workers.
+  max_workers: 256
   max_calls: null
   pathogen_question_version: human-disease-attribution-v3.1
   feature_question_set_version: multi-domain-features-v3.2
