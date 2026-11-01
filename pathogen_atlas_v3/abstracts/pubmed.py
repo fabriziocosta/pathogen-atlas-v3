@@ -588,9 +588,10 @@ def acquire_pubmed(
         raise ValueError("Set NCBI_EMAIL before live PubMed requests.")
     if max_workers < 1 or batch_size < 1 or progress_every < 1:
         raise ValueError("max_workers, batch_size, and progress_every must be positive.")
-    # Keep a margin under NCBI's keyed ceiling; simultaneous jobs may share a
-    # key or network address, so running exactly at the nominal limit is brittle.
-    request_delay_seconds = (0.20 if api_key else 0.34) if request_delay_seconds is None else float(request_delay_seconds)
+    # Keep a margin under NCBI's per-IP ceiling; simultaneous jobs may share a
+    # key or network address, so running exactly at the 10 requests/second
+    # keyed limit is brittle.
+    request_delay_seconds = (0.125 if api_key else 0.34) if request_delay_seconds is None else float(request_delay_seconds)
     retmax = min(max(1, int(retmax)), 10000)
     cache, release = Path(cache_dir), Path(release_dir)
     cache.mkdir(parents=True, exist_ok=True); release.mkdir(parents=True, exist_ok=True)

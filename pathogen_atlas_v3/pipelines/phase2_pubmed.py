@@ -35,7 +35,7 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
         from pathogen_atlas_v3.abstracts.pubmed import _ncbi_key_from_keychain
         import os
         has_key = bool(os.environ.get("NCBI_API_KEY") or os.environ.get("EUTILS_API_KEY") or _ncbi_key_from_keychain())
-        delay = 0.20 if has_key else 0.34
+        delay = 0.125 if has_key else 0.34
     searchable_aliases, excluded_alias_counts = filter_pubmed_search_aliases(
         aliases, excluded_ambiguous_aliases=settings.get("exclude_ambiguous_aliases", []),
     )
