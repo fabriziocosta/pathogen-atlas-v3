@@ -1,0 +1,1118 @@
+# V1 domain-expert yes/no questions, migrated as Jev System 1 noul decisions.
+id: domain_expert_features
+version: v1-domain-expert-questions-73-v1
+source: version1/human_pathogenicity_species.ipynb, cell 18 domain-specific concepts prompt
+source_question_count: 73
+answer_type: noul
+questions:
+  air:
+    concept: AIR
+    category: environmental_reservoir
+    definition: is the pathogen species associated with the air, aerosols, vents, ducts, smoke or dust?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether AIR applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the pathogen species associated with the air, aerosols, vents, ducts,
+      smoke or dust? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  airborne:
+    concept: AIRBORNE
+    category: transmission
+    definition: was the infection acquired due to inhalation of cells, aerosols or droplets in the air?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether AIRBORNE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: was the infection acquired due to inhalation of cells, aerosols
+      or droplets in the air? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  alcohol:
+    concept: ALCOHOL
+    category: patient
+    definition: does the infected patient suffer from alcoholism?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether ALCOHOL applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infected patient suffer from alcoholism? Answer true
+      only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  anaerobic:
+    concept: ANAEROBIC
+    category: bacterial_physiology
+    definition: is the pathgen a (facultative) anaerobe?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether ANAEROBIC applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathgen a (facultative) anaerobe? Answer true only when
+      the title or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge
+      or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  animal_contact:
+    concept: ANIMAL CONTACT
+    category: animal_reservoir
+    definition: can the infection be transmitted via contact with animals (wild, domesticated or pets)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether ANIMAL CONTACT applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: can the infection be transmitted via contact with animals
+      (wild, domesticated or pets)? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  aquatic_vertebrates:
+    concept: AQUATIC VERTEBRATES
+    category: animal_reservoir
+    definition: is the pathogen associated with fish or amphibians?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether AQUATIC VERTEBRATES applies
+      to the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is the pathogen associated with fish or amphibians?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  asymptomatic_carriage:
+    concept: ASYMPTOMATIC CARRIAGE
+    category: bacterial_physiology
+    definition: was the pathogen present but not causing infection prior?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether ASYMPTOMATIC CARRIAGE applies
+      to the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: was the pathogen present but not causing infection
+      prior? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not
+      rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  bacteraemia:
+    concept: BACTERAEMIA
+    category: clinical_presentation
+    definition: was the pathogen detected in blood cultures?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether BACTERAEMIA applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: was the pathogen detected in blood cultures? Answer true only
+      when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge
+      or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  biofilm:
+    concept: BIOFILM
+    category: bacterial_physiology
+    definition: does the pathogen form a biofilm (on mucal surfaces or implants)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether BIOFILM applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the pathogen form a biofilm (on mucal surfaces or implants)?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  birds:
+    concept: BIRDS
+    category: animal_reservoir
+    definition: is the pathogen associated with birds, either wild or domesticated (chickens, ducks, poultry)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether BIRDS applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the pathogen associated with birds, either wild or domesticated (chickens,
+      ducks, poultry)? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  bite:
+    concept: BITE
+    category: transmission
+    definition: is the infection associated with an animal bite or wound (such as from a dog, rat or reptile)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether BITE applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the infection associated with an animal bite or wound (such as from
+      a dog, rat or reptile)? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  cardiovascular:
+    concept: CARDIOVASCULAR
+    category: clinical_presentation
+    definition: does the infection affect the bloodvessel system (such as heartvalves)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether CARDIOVASCULAR applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: does the infection affect the bloodvessel system (such
+      as heartvalves)? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  catheter:
+    concept: CATHETER
+    category: healthcare_associated
+    definition: is the infection associated with a urinary cathether?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether CATHETER applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infection associated with a urinary cathether? Answer
+      true only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  cutaneous:
+    concept: CUTANEOUS
+    category: clinical_presentation
+    definition: does the infection affect the skin  (such as cellulitis)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether CUTANEOUS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect the skin  (such as cellulitis)? Answer
+      true only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  cystic_fibrosis:
+    concept: CYSTIC FIBROSIS
+    category: patient
+    definition: does the infected patient suffer from the underlying condition cystic fibrosis?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether CYSTIC FIBROSIS applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: does the infected patient suffer from the underlying
+      condition cystic fibrosis? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  diabetes:
+    concept: DIABETES
+    category: patient
+    definition: does the infected patient suffer from the underlying condition diabetes?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether DIABETES applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infected patient suffer from the underlying condition
+      diabetes? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  digestive:
+    concept: DIGESTIVE
+    category: clinical_presentation
+    definition: does the infection affect the gastro-intestimal system (such as the gut)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether DIGESTIVE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect the gastro-intestimal system (such
+      as the gut)? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  direct_contact:
+    concept: DIRECT CONTACT
+    category: transmission
+    definition: can the infection be transmitted via human-to-human contact (touch)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether DIRECT CONTACT applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: can the infection be transmitted via human-to-human contact
+      (touch)? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  domesticated_animals:
+    concept: DOMESTICATED ANIMALS
+    category: animal_reservoir
+    definition: is the pathogen associated with livestock such as cattle, pigs, chickens or sheep?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether DOMESTICATED ANIMALS applies
+      to the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is the pathogen associated with livestock such as
+      cattle, pigs, chickens or sheep? Answer true only when the title or abstract explicitly states or clearly
+      supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  drugs:
+    concept: DRUGS
+    category: patient
+    definition: is the infected patient an (intravenous) drug user?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether DRUGS applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the infected patient an (intravenous) drug user? Answer true only when
+      the title or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge
+      or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  dysbiosis:
+    concept: DYSBIOSIS
+    category: other
+    definition: is the presence of the pathogen associated with an imbalance in bacterial composition, changes in
+      bacterial metabolic activities, or changes in bacterial distribution?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether DYSBIOSIS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the presence of the pathogen associated with an imbalance
+      in bacterial composition, changes in bacterial metabolic activities, or changes in bacterial distribution?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  endocrine:
+    concept: ENDOCRINE
+    category: clinical_presentation
+    definition: does the infection affect glands (such as the thyroid glands)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether ENDOCRINE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect glands (such as the thyroid glands)?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  epidemiology:
+    concept: EPIDEMIOLOGY
+    category: public_health
+    definition: is the pathogen discussed in the context of epidemiological surveillance or strategies and measures
+      for monitoring, preventing, or controlling infectious-disease spread (public health interventions)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether EPIDEMIOLOGY applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: the pathogen is discussed in the context of epidemiological
+      surveillance, and strategies and measures aimed at monitoring, preventing, and controlling the spread of infectious
+      diseases (public health interventions)? Answer true only when the title or abstract explicitly states or clearly
+      supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  fecal_oral:
+    concept: FECAL-ORAL
+    category: transmission
+    definition: was the infection acquired via the faecal-oral route (i.e. unsanitary conditions)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether FECAL-ORAL applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: was the infection acquired via the faecal-oral route (i.e. unsanitary
+      conditions)? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  fomite:
+    concept: FOMITE
+    category: transmission
+    definition: was the infecion acquired via physical contact with an inanimate object?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether FOMITE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: was the infecion acquired via physical contact with an inanimate
+      object? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  foodborne:
+    concept: FOODBORNE
+    category: transmission
+    definition: was the infection acquired through the ingestion of food or drink?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether FOODBORNE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: was the infection acquired through the ingestion of food or drink?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  freshwater:
+    concept: FRESHWATER
+    category: environmental_reservoir
+    definition: is the pathogen species associated with lakes, rivers, streams, reservoirs, water storage units/tanks,
+      waterpipes or other freshwater sources?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether FRESHWATER applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen species associated with lakes, rivers, streams,
+      reservoirs, water storage units/tanks, waterpipes or other freshwater sources? Answer true only when the title
+      or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge or infer unstated
+      facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  geography:
+    concept: GEOGRAPHY
+    category: other
+    definition: does the abstract report the city, village, or country where the patient fell ill?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether GEOGRAPHY applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: in what city or village in what country did the patient fall
+      ill? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not
+      rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  immunocompromised:
+    concept: IMMUNOCOMPROMISED
+    category: patient
+    definition: is the infected patient immunocompromised or not immunocompetent?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether IMMUNOCOMPROMISED applies to
+      the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is the infected patient immunocompromised or not
+      immunocompetent? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  immunology:
+    concept: IMMUNOLOGY
+    category: other
+    definition: is the bacterial species  referred to in the context of the host immune response, virulence factors
+      or molecular interactions?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether IMMUNOLOGY applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the bacterial species  referred to in the context of the host
+      immune response, virulence factors or molecular interactions? Answer true only when the title or abstract
+      explicitly states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  immunosuppressed:
+    concept: IMMUNOSUPPRESSED
+    category: patient
+    definition: is he epatient immunocompromised, for example as the result of undergoing chemotherapy or radiotherapy?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether IMMUNOSUPPRESSED applies to
+      the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is he epatient immunocompromised, for example as
+      the result of undergoing chemotherapy or radiotherapy? Answer true only when the title or abstract explicitly
+      states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  intubation:
+    concept: INTUBATION
+    category: healthcare_associated
+    definition: is the infection associated with the mouth, teeth, tongue, vocal cords or airway as a result of
+      ventilation?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether INTUBATION applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infection associated with the mouth, teeth, tongue, vocal
+      cords or airway as a result of ventilation? Answer true only when the title or abstract explicitly states
+      or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  invertebrates:
+    concept: INVERTEBRATES
+    category: animal_reservoir
+    definition: is the pathogen associated with invertebrates such as shellfish, insects or arthropods?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether INVERTEBRATES applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: is the pathogen associated with invertebrates such as
+      shellfish, insects or arthropods? Answer true only when the title or abstract explicitly states or clearly
+      supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  lymphatic:
+    concept: LYMPHATIC
+    category: clinical_presentation
+    definition: does the infection affect the lymphatic system (such as the lymph nodes)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether LYMPHATIC applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect the lymphatic system (such as the lymph
+      nodes)? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  mammals:
+    concept: MAMMALS
+    category: animal_reservoir
+    definition: is the pathogen associated with any (wild) mammal such as rats, rodents, deer, monkeys or bats?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether MAMMALS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen associated with any (wild) mammal such as rats,
+      rodents, deer, monkeys or bats? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  marine:
+    concept: MARINE
+    category: environmental_reservoir
+    definition: is the pathogen species associated with coastal environments, the ocean, the sea, the beach or estuaries?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether MARINE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen species associated with coastal environments,
+      the ocean, the sea, the beach or estuaries? Answer true only when the title or abstract explicitly states
+      or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  microbiome:
+    concept: MICROBIOME
+    category: other
+    definition: is the species discussed in human microbiome sequencing studies that assess whether its presence or
+      abundance is positively or negatively correlated with a noncommunicable disease?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether MICROBIOME applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: the bacterial species is referred to in studies sequencing the
+      human microbiome, specifically whether its presence or abundance is positively or negatively correlated with
+      other (non-communicable) diseases? Answer true only when the title or abstract explicitly states or clearly
+      supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  multidrug_resistance:
+    concept: MULTIDRUG RESISTANCE
+    category: bacterial_physiology
+    definition: is the pathogen resistant to multiple antibiotics?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether MULTIDRUG RESISTANCE applies
+      to the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is the pathogen resistant to multiple antibiotics?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  musculoskeletal:
+    concept: MUSCULOSKELETAL
+    category: clinical_presentation
+    definition: does the infection affect the muscular system (such as myositis) or the skeletal system (such as
+      osteomyelitis)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether MUSCULOSKELETAL applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: does the infection affect the muscular system (such as
+      myositis) or the skeletal system (such as osteomyelitis)? Answer true only when the title or abstract explicitly
+      states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  neurological:
+    concept: NEUROLOGICAL
+    category: clinical_presentation
+    definition: does the infection affect the nervous system (such as the brain)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether NEUROLOGICAL applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: does the infection affect the nervous system (such as
+      the brain)? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  nosocomial:
+    concept: NOSOCOMIAL
+    category: infection_context
+    definition: is there evidence that the infection was healthcare associated (e.g. acquired in the hospital)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether NOSOCOMIAL applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is there evidence that the infection was healthcare associated
+      (e.g. acquired in the hospital)? Answer true only when the title or abstract explicitly states or clearly
+      supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  ointment:
+    concept: OINTMENT
+    category: healthcare_associated
+    definition: is the infection associated with a dressing, salve or oitnment?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether OINTMENT applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infection associated with a dressing, salve or oitnment?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  operation:
+    concept: OPERATION
+    category: infection_context
+    definition: is the infection associated with an operation?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether OPERATION applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infection associated with an operation? Answer true only
+      when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge
+      or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  opportunistic:
+    concept: OPPORTUNISTIC
+    category: infection_context
+    definition: is the pathogen referred to as being opportunistic?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether OPPORTUNISTIC applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: is the pathogen referred to as being opportunistic? Answer
+      true only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  outbreaks:
+    concept: OUTBREAKS
+    category: infection_context
+    definition: are multiple infections reported at the same time as the result of (local) clusters or outbreaks?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether OUTBREAKS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: are multiple infections reported at the same time as the result
+      of (local) clusters or outbreaks? Answer true only when the title or abstract explicitly states or clearly
+      supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  patient_age:
+    concept: PATIENT AGE
+    category: patient
+    definition: does the abstract report the infected patient's age or age group (neonate, child, adult, or elderly)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether PATIENT AGE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infected person a neonate, child, adult or elderly? Answer
+      true only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  patient_occupation:
+    concept: PATIENT OCCUPATION
+    category: patient
+    definition: does the abstract report the patient's job, role, or occupation?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether PATIENT OCCUPATION applies to
+      the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: what is the job, role or occupation of the patient?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  pets:
+    concept: PETS
+    category: animal_reservoir
+    definition: is the pathogen associated with companion animals such as cats, dogs or hamsters?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether PETS applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the pathogen associated with companion animals such as cats, dogs or
+      hamsters? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  plants:
+    concept: PLANTS
+    category: environmental_reservoir
+    definition: is the pathogen species associated with plants, crops, fruits, seeds, nuts, vegetables or vegetable
+      matter?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether PLANTS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen species associated with plants, crops, fruits,
+      seeds, nuts, vegetables or vegetable matter? Answer true only when the title or abstract explicitly states
+      or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  polymicrobial:
+    concept: POLYMICROBIAL
+    category: infection_context
+    definition: are multiple pathogens associated with the infection site?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether POLYMICROBIAL applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: are multiple pathogens associated with the infection
+      site? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not
+      rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  precipitation:
+    concept: PRECIPITATION
+    category: environmental_reservoir
+    definition: is the pathogen associated with rain, aerosols and/or extreme weather events such as flooding, hurricanes
+      or storms?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether PRECIPITATION applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: is the pathogen associated with rain, aerosols and/or
+      extreme weather events such as flooding, hurricanes or storms? Answer true only when the title or abstract
+      explicitly states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  priority_species:
+    concept: PRIORITY SPECIES
+    category: public_health
+    definition: is the pathogen species listed as an emerging infectious disease or as a species of high priority
+      to public health?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether PRIORITY SPECIES applies to
+      the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is the pathogen species listed as an emerging infectious
+      disease or as a species of high priority to public health? Answer true only when the title or abstract explicitly
+      states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  recreation:
+    concept: RECREATION
+    category: other
+    definition: is the infection mentioned in the context of outdoor activities such as swimming or hiking?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether RECREATION applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infection mentioned in the context of outdoor activities
+      such as swimming or hiking? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  replacement:
+    concept: REPLACEMENT
+    category: healthcare_associated
+    definition: is the infection associated with an implant (such as a hip- or heartvalve replacement)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether REPLACEMENT applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the infection associated with an implant (such as a hip- or
+      heartvalve replacement)? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  reproductive:
+    concept: REPRODUCTIVE
+    category: clinical_presentation
+    definition: does the infection affect the male or female reproductive system (such as the vagina)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether REPRODUCTIVE applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: does the infection affect the male or female reproductive
+      system (such as the vagina)? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  reptiles:
+    concept: REPTILES
+    category: animal_reservoir
+    definition: is the pathogen associated with reptiles such as snakes or turtles?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether REPTILES applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen associated with reptiles such as snakes or turtles?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  respiratory:
+    concept: RESPIRATORY
+    category: clinical_presentation
+    definition: does the infection affect the respiratory system (such as the lungs)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether RESPIRATORY applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect the respiratory system (such as the
+      lungs)? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  sewage:
+    concept: SEWAGE
+    category: environmental_reservoir
+    definition: is the pathogen associated with sewage, septic tanks, slurry or agricultural run-off?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether SEWAGE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen associated with sewage, septic tanks, slurry
+      or agricultural run-off? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  sexually_transmitted:
+    concept: SEXUALLY TRANSMITTED
+    category: transmission
+    definition: is the infection associated with sexual contact?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether SEXUALLY TRANSMITTED applies
+      to the human infection or disease in this article. Use species.canonical_name and species.names_in_query when
+      the concept concerns the organism. V1 expert definition: is the infection associated with sexual contact?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  smoking:
+    concept: SMOKING
+    category: patient
+    definition: does the infected patient smoke tobacco?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether SMOKING applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infected patient smoke tobacco? Answer true only when
+      the title or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge
+      or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  soil:
+    concept: SOIL
+    category: environmental_reservoir
+    definition: is the pathogen species associated with soils or sediments?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether SOIL applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the pathogen species associated with soils or sediments? Answer true
+      only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  sporeforming:
+    concept: SPOREFORMING
+    category: bacterial_physiology
+    definition: is the pahogen capable of producing spores or dormant cells?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether SPOREFORMING applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: is the pahogen capable of producing spores or dormant
+      cells? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not
+      rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  sterile_site:
+    concept: STERILE SITE
+    category: clinical_presentation
+    definition: is the infection site normally sterile (e.g. spinal fluid)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether STERILE SITE applies to the
+      human infection or disease in this article. Use species.canonical_name and species.names_in_query when the
+      concept concerns the organism. V1 expert definition: is the infection site normally sterile (e.g. spinal fluid)?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  systemic:
+    concept: SYSTEMIC
+    category: clinical_presentation
+    definition: does the infection affect the entire body, rather than a single organ or body part (for instance
+      blood, e.g. sepsis)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether SYSTEMIC applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect the entire body, rather than a single
+      organ or body part (for instance blood, e.g. sepsis)? Answer true only when the title or abstract explicitly
+      states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  temperature:
+    concept: TEMPERATURE
+    category: environmental_reservoir
+    definition: is the pathogen associated with increases in temperature, and/or extreme weather events such as
+      heatwaves or wildfires?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether TEMPERATURE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen associated with increases in temperature, and/or
+      extreme weather events such as heatwaves or wildfires? Answer true only when the title or abstract explicitly
+      states or clearly supports the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  toxins:
+    concept: TOXINS
+    category: bacterial_physiology
+    definition: are symptoms caused by (endo)toxins?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether TOXINS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: are symptoms caused by (endo)toxins? Answer true only when the
+      title or abstract explicitly states or clearly supports the concept. Do not rely on outside knowledge or infer
+      unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  urinary:
+    concept: URINARY
+    category: clinical_presentation
+    definition: does the infection affect the urinary system (such as the urinary tract)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether URINARY applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: does the infection affect the urinary system (such as the urinary
+      tract)? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do
+      not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  vaccine:
+    concept: VACCINE
+    category: public_health
+    definition: is the pathogen mentioned in the context of immunization or vaccination?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether VACCINE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the pathogen mentioned in the context of immunization or vaccination?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  vectorborne:
+    concept: VECTORBORNE
+    category: transmission
+    definition: is the disease transmitted by blood-feeding anthropods such as mosquitoes, ticks or fleas?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether VECTORBORNE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the disease transmitted by blood-feeding anthropods such as
+      mosquitoes, ticks or fleas? Answer true only when the title or abstract explicitly states or clearly supports
+      the concept. Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  vertical:
+    concept: VERTICAL
+    category: transmission
+    definition: can the infection be transmitted from mother to child?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether VERTICAL applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: can the infection be transmitted from mother to child? Answer
+      true only when the title or abstract explicitly states or clearly supports the concept. Do not rely on outside
+      knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  waterborne:
+    concept: WATERBORNE
+    category: transmission
+    definition: was the infection acquired through contact with contaminated water?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether WATERBORNE applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: was the infection acquired through contact with contaminated
+      water? Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not
+      rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  wound:
+    concept: WOUND
+    category: transmission
+    definition: is the infection assciated with a wound resulting from an accident (but not a bite)?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether WOUND applies to the human infection
+      or disease in this article. Use species.canonical_name and species.names_in_query when the concept concerns
+      the organism. V1 expert definition: is the infection assciated with a wound resulting from an accident (but
+      not a bite)? Answer true only when the title or abstract explicitly states or clearly supports the concept.
+      Do not rely on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.
+  zoonosis:
+    concept: ZOONOSIS
+    category: transmission
+    definition: is the disease transmissable from vertebrate animals to humans?
+    type: noul
+    instructions: 'Based only on article.title and article.abstract, assess whether ZOONOSIS applies to the human
+      infection or disease in this article. Use species.canonical_name and species.names_in_query when the concept
+      concerns the organism. V1 expert definition: is the disease transmissable from vertebrate animals to humans?
+      Answer true only when the title or abstract explicitly states or clearly supports the concept. Do not rely
+      on outside knowledge or infer unstated facts.'
+    criteria:
+      'true': The title or abstract explicitly states or clearly supports that this concept applies in the sense
+        defined by the question.
+      'false': The concept is absent, unsupported by the title or abstract, applies only to an unrelated organism
+        or context, or would require inference or outside knowledge.

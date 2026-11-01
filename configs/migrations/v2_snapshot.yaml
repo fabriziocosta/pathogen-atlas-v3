@@ -1,0 +1,54 @@
+id: v2-snapshot-to-v3-local-migration
+version: 1
+source:
+  project: pathogen-atlas-v2
+  repository: https://github.com/fabriziocosta/pathogen-atlas-v2.git
+  git_commit: 6dd601f53d9312d1879403f326b1548dcb92c676
+  copied_data_path: data/migration/version2_snapshot
+  source_working_tree_modified: false
+target:
+  project: pathogen-atlas-v3
+  schema_version: 1
+conversion:
+  phase1: data/01_taxonomy/release/species.parquet and aliases.parquet
+  phase2: data/02_pubmed/release/abstracts.parquet and species_abstracts.parquet
+  decisions: data/03_decisions/legacy_v2/decisions.parquet
+  promotion_policy: V2 Jev scores remain legacy and are not promoted to V3 evidence without question/profile compatibility approval.
+source_snapshot_counts:
+  species: 22804
+  aliases_before_normalization: 28766
+  abstracts: 110213
+  species_pmid_matches: 2076387
+  legacy_decisions: 2134734
+additional_taxonomy_inputs:
+  species_fungorum:
+    archive: data/source_taxonomy/fungi/SFPK_Published_Names_Export_16102026.zip
+    sha256: f6c13e387deecc6209b5b8cf16cdb1817ca0f767d2c5492e5c9b56bf1532457d
+    mapping_document: data/source_taxonomy/fungi/Species_Fungorum_Snapshot_Mapping.xlsx
+    mapping_document_sha256: cc2cc2dda8719363786ad85bbdba064441b7003dc081995a854cd0c87c9b82c4
+    archive_date: 2026-10-12
+    snapshot_export_date: 2026-10-16
+    url: https://sftp.kew.org/pub/data-repositories/SpeciesFungorum/SFPK%20-%20Published%20Names%20Export%2016102026.zip
+  ictv_msl:
+    file: data/source_taxonomy/viruses/ICTV_Master_Species_List_2025_MSL41.v1.xlsx
+    sha256: bcb96da710bb7d828a23cfa81ba8bb77538eff1cebee02b488244e1b1c186556
+    release: MSL41-v1
+    url: https://ictv.global/sites/default/files/MSL/ICTV_Master_Species_List_2025_MSL41.v1.xlsx
+  ictv_vmr:
+    file: data/source_taxonomy/viruses/VMR_MSL41.v1.20260729.xlsx
+    sha256: b79b5d82a1b3b8e9dd5e19afe8fe1a8f441267474918a7cefa8ae4913adf45bb
+    release: VMR_MSL41.v1.20260729
+    url: https://ictv.global/sites/default/files/VMR/VMR_MSL41.v1.20260729.xlsx
+imported_counts:
+  fungi_accepted_species: 101843
+  fungi_alias_records: 150519
+  fungi_ambiguous_accepted_name_records: 40
+  virus_species: 17554
+  virus_alias_records: 17554
+  virus_variant_records: 19285
+  virus_variant_aliases: 36652
+  combined_species: 142201
+  combined_alias_records: 232980
+  combined_unresolved_alias_mappings: 21291
+git_policy:
+  all_data_and_generated_outputs: local_only_ignored

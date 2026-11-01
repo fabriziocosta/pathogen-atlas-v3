@@ -1,0 +1,31 @@
+# All source data, caches and generated outputs stay local by project policy.
+/data/**
+!/data/README.md
+!/data/.gitkeep
+*.parquet
+*.jsonl
+*.csv
+*.tsv
+*.xlsx
+*.pdf
+/data/**/*.png
+/sites/pathogen-atlas-explorer/dist/explorer-data.json
+/sites/pathogen-atlas-explorer/dist/evidence/
+!/assets/pathogen-atlas-logo.png
+
+# Local configuration and credentials
+.env
+.env.*
+configs/local/
+
+# Python and notebook artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store

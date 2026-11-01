@@ -1,0 +1,22 @@
+version: taxonomy-inputs-v3.1
+sources:
+  bacteria:
+    adapter: lpsn
+    path: data/migration/version2_snapshot/01_species/release/species_canonical.parquet
+    release: migrated-v2-lpsn-local-capture
+  fungi:
+    adapter: species_fungorum
+    path: data/source_taxonomy/fungi/SFPK_Published_Names_Export_16102026.zip
+    release: "Species Fungorum snapshot archived 12 October 2026; export 16 October 2026"
+    source_url: https://sftp.kew.org/pub/data-repositories/SpeciesFungorum/SFPK%20-%20Published%20Names%20Export%2016102026.zip
+    license: CC-BY-3.0
+  viruses:
+    adapter: ictv_msl
+    path: data/source_taxonomy/viruses/ICTV_Master_Species_List_2025_MSL41.v1.xlsx
+    release: ICTV MSL41 (2025 taxonomy; ratified February 2026), v1
+    source_url: https://ictv.global/sites/default/files/MSL/ICTV_Master_Species_List_2025_MSL41.v1.xlsx
+    license: CC-BY-4.0
+    variant_metadata_adapter: ictv_vmr
+    variant_metadata_path: data/source_taxonomy/viruses/VMR_MSL41.v1.20260729.xlsx
+    variant_metadata_release: ICTV VMR MSL41 v1, 2026-07-29
+    variant_metadata_url: https://ictv.global/sites/default/files/VMR/VMR_MSL41.v1.20260729.xlsx

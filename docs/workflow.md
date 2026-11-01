@@ -1,0 +1,31 @@
+# V3 workflow
+
+V3 is an independent Python project. Run commands from the `version3/` root. The notebooks show configuration, input tables, source functions, and resulting output paths before calling a phase. Phase implementations remain in `pathogen_atlas_v3/` so a notebook does not conceal reusable logic.
+
+## Install and configure
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[notebooks,dev]'
+```
+
+Set `NCBI_EMAIL` for live PubMed acquisition. Set `NCBI_API_KEY` to raise the E-utilities request allowance. Set `OPENROUTER_API_KEY` only when running Jev. Secrets belong in the environment or an ignored local configuration, never in tracked YAML.
+
+## Ordered phases
+
+1. **Taxonomy** — run `notebooks/01_taxonomy.ipynb`. It migrates the local V2 bacterial taxonomy and aliases, imports pinned Species Fungorum and ICTV MSL41 files, and joins VMR MSL41 isolate metadata to ICTV taxon IDs.
+2. **PubMed** — run `notebooks/02_pubmed.ipynb`. NCBI searches are keyed by query hash and written incrementally to local JSONL caches. Existing query and PMID cache entries are reused. Request pacing is global across worker threads: 0.34 seconds by default without `NCBI_API_KEY`, and 0.11 seconds with a key, matching NCBI's 3 and 10 request-per-second defaults. `NCBI_EMAIL` identifies the tool contact; the API key, not email alone, enables the higher default rate. Search results above NCBI's 10,000 PMID ESearch response limit are flagged in acquisition metadata as incomplete. The notebook exposes worker count, optional request-delay override, query-call limit, and fetch-batch limit. See the [NCBI usage guidelines](https://eutilities.github.io/site/API_Key/usageandkey/) and [ESearch limits](https://www.ncbi.nlm.nih.gov/books/NBK25499/).
+3. **Jev decisions** — run `notebooks/03_decisions.ipynb`. The disease attribution gate is one typed question per selected species–PMID pair. Passing abstracts are sent once more with all applicable features for that organism group. Successful decisions resume only when organism, PMID, input hash, run, model, question version, and feature-profile version match. Failed and malformed outputs remain retryable. Concurrency, max calls, ETA, and remaining OpenRouter balance are visible.
+4. **Release tables** — run `notebooks/04_release.ipynb`. Tables are deterministic transformations of saved decisions. The 0.75 gate and feature thresholds are configurable. Until labelled evaluation is approved, gate-positive records remain candidates and are not marked accepted. The Pathogenic Interest Index retains its three input counts and normalizes within organism group.
+5. **Embedding** — run `notebooks/05_embedding.ipynb`. Requires the optional visualization dependencies. It fits a shared-core map and separate organism-group maps. Non-applicable features are excluded from a profile; missing observations in selected features are mean-imputed within that map, never zero-imputed.
+
+The Phase 3 notebook defaults to preflight only. Set `RUN_PHASE = True` and a bounded `MAX_CALLS` for a pilot. Set the limit to `None` only after the question set, taxonomy profile, estimated call volume, and available OpenRouter balance have been reviewed. Stop safely at any checkpoint and rerun the notebook to resume.
+
+## Data and Git
+
+All local data and generated outputs are ignored by V3 Git policy. The complete V2 `data/` tree is copied under `data/migration/version2_snapshot/`; the migration utility never writes to V2. Only code, configs, notebooks, docs, schemas, and migration manifests are synced. The V2 source commit and expected snapshot counts are recorded in `configs/migrations/v2_snapshot.yaml`.
+
+## First-run limitations
+
+The local V2 migration populates the bacterial cohort and historical records. Pinned Species Fungorum and ICTV MSL41 exports are also stored locally under `data/source_taxonomy/` and loaded by Phase 1. V2 model decisions are stored in the legacy table; V3 prompt/profile versions require fresh V3 decisions before current evidence can be released.

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pathogen-atlas-v3"
+version = "0.1.0"
+description = "Multi-domain Pathogen Atlas data acquisition and evidence pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "biopython>=1.83",
+  "openpyxl>=3.1",
+  "pandas>=2.0",
+  "pyarrow>=14.0",
+  "PyYAML>=6.0",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+notebooks = ["ipykernel>=6.0", "jupyterlab>=4.0", "nbformat>=5.0"]
+viz = [
+  "imste @ git+https://github.com/fabriziocosta/IteratedMinimumSpanningTree.git@0a34b643e0a33f201d2bae36c32297c5c397202e",
+  "plotly>=5.0",
+  "scikit-learn>=1.3",
+]
+dev = ["pytest>=8.0", "nbformat>=5.0"]
+
+[project.scripts]
+pathogen-atlas-v3-migrate-v2 = "pathogen_atlas_v3.migration.version2:main"
+pathogen-atlas-v3-phase1 = "pathogen_atlas_v3.pipelines.phase1_taxonomy:main"
+pathogen-atlas-v3-phase2 = "pathogen_atlas_v3.pipelines.phase2_pubmed:main"
+pathogen-atlas-v3-phase3 = "pathogen_atlas_v3.pipelines.phase3_decisions:main"
+pathogen-atlas-v3-phase4 = "pathogen_atlas_v3.pipelines.phase4_release:main"
+pathogen-atlas-v3-phase5 = "pathogen_atlas_v3.pipelines.phase5_embedding:main"
+
+[tool.setuptools.packages.find]
+include = ["pathogen_atlas_v3*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

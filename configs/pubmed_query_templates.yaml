@@ -1,0 +1,6 @@
+version: pubmed-query-templates-v3.1
+templates:
+  exact_name_human_disease:
+    description: Search for accepted names and aliases in PubMed with a broad human disease context.
+    query: '({{names}}) AND (humans[MeSH Terms] OR human[Title/Abstract] OR patient[Title/Abstract] OR patients[Title/Abstract] OR infection[Title/Abstract] OR disease[Title/Abstract])'
+    domains: [bacteria, fungi, viruses]
