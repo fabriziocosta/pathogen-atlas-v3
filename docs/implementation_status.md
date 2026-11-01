@@ -8,7 +8,7 @@
 - Migration to V3 organism, alias, abstract-match, and legacy-decision schemas, with the old Pathogenic Interest Index retained separately.
 - 73 inherited bacteria features and initial fungal/viral candidate profiles in a versioned catalogue.
 - Source-file adapters for LPSN, the dated Species Fungorum snapshot, and pinned ICTV MSL41; full taxonomy source rows are retained in provenance JSON.
-- Rate-limited resumable PubMed acquisition, typed Jev gate/feature calls, local JSONL raw responses, parquet decision ledger, Phase 4 tables, IMSTE coordinates, and a static Explorer build.
+- Rate-limited resumable PubMed acquisition, typed Jev gate/feature calls, local JSONL raw responses, parquet decision ledger, Phase 4 tables, IMSTE coordinates, and a static Explorer build. The current viral release contains 187,325 completed pathogen-gate assessments; the Explorer exposes their PMID, title, Jev confidence, and provisional candidate status.
 - Fake-client tests for all three groups, decision resume/retry and taxonomy/index contracts.
 
 ## Still required before a production multi-domain release
@@ -20,4 +20,4 @@
 - Fit and inspect V3 shared and domain-specific IMSTE spaces after scored features exist.
 - Extend Wikipedia and GBIF link association coverage to the new fungal/viral cohorts.
 
-A bounded live PubMed pilot has run for ten taxa in each organism group. Its query and abstract caches are local under `data/02_pubmed/`; see `pilot_review.md` in the `pilot_v2_filtered_aliases` directory. No Jev calls have been made, and the capped search results are not full acquisition releases.
+V3 viral PubMed acquisition covers all 17,554 taxonomy species and has 144,811 fetched abstracts. The viral pathogen-gate run is complete for 187,325 sampled species–PMID records. Feature scoring has 46,299 completed and 303,902 failed decision rows, so virus feature profiles are incomplete; retrying those failures and evaluating the Jev labels remain production-release requirements. Raw provider responses and source caches stay local and are not included in the public Explorer package.
