@@ -681,9 +681,16 @@ def acquire_pubmed(
         for query_id in active_query_ids
         for pmid in query_cache.get(query_id, {}).get("pmids", [])
     }
+    species_with_pmids = {
+        str(query_cache[query_id]["organism_id"])
+        for query_id in active_query_ids
+        if query_id in query_cache and query_cache[query_id].get("pmids")
+    }
     for index, item in enumerate(_bounded_results(tasks, search, max_workers), 1):
         query_cache[item["query_id"]] = item; append_jsonl(query_path, item)
         collected_pmids.update(str(pmid) for pmid in item.get("pmids", []))
+        if item.get("pmids"):
+            species_with_pmids.add(str(item["organism_id"]))
         if log and (index % progress_every == 0 or index == len(tasks)):
             rate = index / max(0.01, time.monotonic() - search_start)
             completed_total = sum(query_id in query_cache for query_id in active_query_ids)
@@ -691,7 +698,8 @@ def acquire_pubmed(
             eta = (len(tasks)-index) / rate if rate else 0
             print(
                 f"PubMed search: {completed_total:,}/{len(species) - species_without_searchable_names:,} "
-                f"({progress:.1f}%); {len(collected_pmids):,} unique filtered PMIDs collected; "
+                f"({progress:.1f}%); {len(species_with_pmids):,} species with filtered PMID hits; "
+                f"{len(collected_pmids):,} unique filtered PMIDs collected; "
                 f"ETA {_format_eta(eta)}."
             )
     active_queries = [query_cache[query_id] for query_id in active_query_ids if query_id in query_cache]
