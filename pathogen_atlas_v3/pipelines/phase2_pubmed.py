@@ -24,6 +24,7 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
     species = pd.read_parquet(taxonomy_root / "species.parquet")
     aliases = pd.read_parquet(taxonomy_root / "aliases.parquet")
     settings = config["pubmed"]
+    sampling = settings.get("sampling", {})
     retmax = min(10000, max(1, int(settings.get("retmax", 10000))))
     delay = settings.get("request_delay_seconds")
     if delay is None:
@@ -79,6 +80,9 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
     return {"status": "ready", "selected_groups": groups, "per_group": per_group, "pending_queries": pending_total,
             "request_delay_seconds": float(delay), "estimated_search_floor_minutes": round(eta_seconds / 60, 1),
             "retmax_per_query": retmax,
+            "sampling": {"max_pmids_per_species": sampling.get("max_pmids_per_species", 200),
+                         "oldest_pmids_per_species": int(sampling.get("oldest_pmids_per_species", 30)),
+                         "random_seed": int(sampling.get("random_seed", 42))},
             "estimated_search_note": "Lower-bound new ESearch time; excludes retries, overflow expansion, throttling, and abstract retrieval."}
 
 
@@ -87,6 +91,7 @@ def run_phase2(config_path: str = "configs/default.yaml", *, max_calls: int | No
     species = pd.read_parquet(config["paths"]["taxonomy_release"] + "/species.parquet")
     aliases = pd.read_parquet(config["paths"]["taxonomy_release"] + "/aliases.parquet")
     settings, paths = config["pubmed"], config["paths"]
+    sampling = settings.get("sampling", {})
     groups = selected_organism_groups(config)
     root = Path(paths.get("pubmed_domain_root", Path(paths["pubmed_release"]).parent / "domains"))
     request_limit = max_calls if max_calls is not None else settings.get("max_calls")
@@ -109,6 +114,9 @@ def run_phase2(config_path: str = "configs/default.yaml", *, max_calls: int | No
             max_workers=int(settings.get("max_workers", 10)), request_delay_seconds=settings.get("request_delay_seconds"),
             max_calls=group_limit, max_fetch_batches=fetch_limit,
             retmax=int(settings.get("retmax", 10000)), batch_size=int(settings.get("batch_size", 200)),
+            max_pmids_per_species=sampling.get("max_pmids_per_species", 200),
+            oldest_pmids_per_species=int(sampling.get("oldest_pmids_per_species", 30)),
+            pmid_sample_random_seed=int(sampling.get("random_seed", 42)),
             progress_every=progress_every,
             expand_overflow=group_limit is None,
             log=log,
@@ -122,18 +130,35 @@ def run_phase2(config_path: str = "configs/default.yaml", *, max_calls: int | No
         matches = matches.drop_duplicates(["organism_id", "pmid"], keep="last")
     if not abstracts.empty:
         abstracts = abstracts.drop_duplicates("pmid", keep="last")
-    # Refresh selected groups in the combined release while preserving all other groups.
+    # Refresh selected groups in the combined release while preserving other
+    # groups' fetched abstracts. Abstract records are PMID-keyed and do not
+    # carry an organism group, so use the previous match table to find the PMIDs
+    # still needed by unselected groups.
     release_root = Path(paths["pubmed_release"])
     release_root.mkdir(parents=True, exist_ok=True)
-    for filename, incoming, keys in (("species_abstracts.parquet", matches, ["organism_id", "pmid"]), ("abstracts.parquet", abstracts, ["pmid"])):
-        target = release_root / filename
-        previous = pd.read_parquet(target) if target.exists() else pd.DataFrame()
-        if not previous.empty and "organism_group" in previous:
-            previous = previous.loc[~previous["organism_group"].astype(str).isin(groups)]
-        combined = pd.concat([previous, incoming], ignore_index=True, sort=False) if not incoming.empty or not previous.empty else pd.DataFrame()
-        if not combined.empty:
-            combined = combined.drop_duplicates(keys, keep="last")
-        atomic_parquet(combined, target)
+    matches_path = release_root / "species_abstracts.parquet"
+    previous_matches = pd.read_parquet(matches_path) if matches_path.exists() else pd.DataFrame()
+    preserved_matches = previous_matches
+    preserved_pmids = None
+    if not previous_matches.empty and "organism_group" in previous_matches:
+        preserved_matches = previous_matches.loc[~previous_matches["organism_group"].astype(str).isin(groups)]
+        abstract_matches = preserved_matches
+        if "selected_for_sampling" in preserved_matches:
+            abstract_matches = preserved_matches.loc[preserved_matches["selected_for_sampling"].fillna(False).astype(bool)]
+        preserved_pmids = set(abstract_matches["pmid"].astype(str)) if "pmid" in abstract_matches else set()
+    combined_matches = pd.concat([preserved_matches, matches], ignore_index=True, sort=False) if not matches.empty or not preserved_matches.empty else pd.DataFrame()
+    if not combined_matches.empty:
+        combined_matches = combined_matches.drop_duplicates(["organism_id", "pmid"], keep="last")
+    atomic_parquet(combined_matches, matches_path)
+
+    abstracts_path = release_root / "abstracts.parquet"
+    previous_abstracts = pd.read_parquet(abstracts_path) if abstracts_path.exists() else pd.DataFrame()
+    if preserved_pmids is not None and not previous_abstracts.empty and "pmid" in previous_abstracts:
+        previous_abstracts = previous_abstracts.loc[previous_abstracts["pmid"].astype(str).isin(preserved_pmids)]
+    combined_abstracts = pd.concat([previous_abstracts, abstracts], ignore_index=True, sort=False) if not abstracts.empty or not previous_abstracts.empty else pd.DataFrame()
+    if not combined_abstracts.empty:
+        combined_abstracts = combined_abstracts.drop_duplicates(["pmid"], keep="last")
+    atomic_parquet(combined_abstracts, abstracts_path)
     return matches, abstracts
 
 

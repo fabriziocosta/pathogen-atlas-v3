@@ -11,12 +11,13 @@ import pandas as pd
 from pathogen_atlas_v3.common.io import atomic_parquet, load_yaml
 from pathogen_atlas_v3.decisions.runner import prepare_species_abstracts
 from pathogen_atlas_v3.decisions.features import load_feature_catalog
-from pathogen_atlas_v3.tables.interest_index import build_pathogenic_interest_index
+from pathogen_atlas_v3.tables.interest_index import INDEX_VERSION, build_pathogenic_interest_index
 
 
 def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: str | None = None) -> dict[str, int]:
     config = load_yaml(config_path)
     paths, decision = config["paths"], config["decisions"]
+    sampling = config.get("pubmed", {}).get("sampling", {})
     taxonomy_root = Path(paths["taxonomy_release"])
     pubmed_root = Path(paths["pubmed_release"])
     species = pd.read_parquet(taxonomy_root / "species.parquet")
@@ -97,7 +98,7 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
     atomic_parquet(features, out / "feature_decisions.parquet")
     atomic_parquet(matrix, out / "species_feature_matrix.parquet")
     atomic_parquet(accepted, out / "accepted_pathogen_evidence.parquet")
-    metadata = {"release_version": "v3.1", "pathogen_threshold": float(decision.get("pathogen_threshold", .75)), "feature_yes_threshold": float(decision.get("feature_yes_threshold", .75)), "evaluation_approved": bool(decision.get("release_evaluation_approved", False)), "candidate_species_pmid_records": int(gate["candidate_pathogen_evidence"].sum()) if not gate.empty else 0, "species": len(summary), "accepted_species_pmid_records": len(accepted), "feature_decision_rows": len(features), "index_version": "pathogenic-interest-index-v3.1", "group_normalization": "each organism_group normalized independently; not directly comparable across groups"}
+    metadata = {"release_version": "v3.2", "pathogen_threshold": float(decision.get("pathogen_threshold", .75)), "feature_yes_threshold": float(decision.get("feature_yes_threshold", .75)), "feature_question_set_version": decision.get("feature_question_set_version"), "evaluation_approved": bool(decision.get("release_evaluation_approved", False)), "candidate_species_pmid_records": int(gate["candidate_pathogen_evidence"].sum()) if not gate.empty else 0, "species": len(summary), "accepted_species_pmid_records": len(accepted), "feature_decision_rows": len(features), "index_version": INDEX_VERSION, "pubmed_sampling": {"max_pmids_per_species": sampling.get("max_pmids_per_species", 200), "oldest_pmids_per_species": int(sampling.get("oldest_pmids_per_species", 30)), "random_seed": int(sampling.get("random_seed", 42))}, "group_normalization": "each organism_group normalized independently; not directly comparable across groups"}
     (out / "release_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return {"species": len(summary), "accepted_evidence": len(accepted), "feature_decisions": len(features)}
 

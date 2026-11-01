@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-INDEX_VERSION = "pathogenic-interest-index-v3.1"
+INDEX_VERSION = "pathogenic-interest-index-v3.2-sampled"
 REQUIRED = ("organism_id", "organism_group", "n_pathogen_pmids", "n_abstracts_fetched", "n_pubmed_search_records")
 
 
@@ -14,6 +14,9 @@ def build_pathogenic_interest_index(summary: pd.DataFrame) -> pd.DataFrame:
 
     Estimate accepted evidence as n_pathogen_pmids / n_abstracts_fetched *
     n_pubmed_search_records, take log, then normalize within organism_group.
+    V3.2 uses the configured reproducible per-species abstract sample, matching
+    the V2 sampling design; the sample size and seed are stored in Phase 2
+    acquisition metadata.
     Groups are intentionally not normalized together.
     """
     missing = set(REQUIRED) - set(summary.columns)

@@ -43,6 +43,10 @@ pubmed:
   request_delay_seconds: null
   batch_size: 200
   retmax: 10000
+  sampling:
+    max_pmids_per_species: 200
+    oldest_pmids_per_species: 30
+    random_seed: 42
   checkpoint_every: 100
   max_calls: null
   max_fetch_batches: null

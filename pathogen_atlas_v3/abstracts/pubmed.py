@@ -209,6 +209,59 @@ def _fetch_batches(match_frame: pd.DataFrame, article_cache: dict[str, dict[str,
     return sorted(selected), batches
 
 
+def sample_species_pmids(
+    matches: pd.DataFrame,
+    *,
+    max_pmids_per_species: int | None = 200,
+    oldest_pmids_per_species: int = 30,
+    random_seed: int = 42,
+) -> pd.DataFrame:
+    """Mark a reproducible per-organism PMID sample using the V2 policy.
+
+    Retain the oldest PMID identifiers first, then draw the remaining sample
+    uniformly without replacement. PMID order is the same convention used in
+    V2; this is an identifier-based proxy for publication age, not a date sort.
+    All input search matches remain in the returned frame for full search counts.
+    """
+    required = {"organism_id", "organism_group", "pmid"}
+    if not required.issubset(matches.columns):
+        raise ValueError(f"Sampling input is missing columns: {sorted(required - set(matches.columns))}.")
+    if max_pmids_per_species is not None and int(max_pmids_per_species) < 1:
+        raise ValueError("max_pmids_per_species must be positive or None.")
+    if int(oldest_pmids_per_species) < 0:
+        raise ValueError("oldest_pmids_per_species cannot be negative.")
+    result = matches.copy().reset_index(drop=True)
+    result["pmid"] = result["pmid"].astype(str)
+    result["selected_for_sampling"] = False
+    result["sample_selection"] = "not_sampled"
+    for _, indices in result.groupby("organism_id", sort=False).groups.items():
+        group = result.loc[indices]
+        pmids = sorted(set(group["pmid"].astype(str)))
+        if max_pmids_per_species is None or len(pmids) <= int(max_pmids_per_species):
+            sampled = pmids
+            oldest = pmids
+            random_sample: list[str] = []
+            selection_for_pmid = {pmid: "all" for pmid in sampled}
+        else:
+            maximum = int(max_pmids_per_species)
+            oldest_count = min(int(oldest_pmids_per_species), maximum, len(pmids))
+            oldest = sorted(pmids, key=lambda value: (0, int(value)) if value.isdigit() else (1, value))[:oldest_count]
+            remaining = [pmid for pmid in pmids if pmid not in set(oldest)]
+            budget = maximum - len(oldest)
+            if len(remaining) > budget:
+                random_sample = pd.Series(remaining).sample(n=budget, random_state=int(random_seed)).astype(str).tolist()
+            else:
+                random_sample = sorted(remaining, key=lambda value: (0, int(value)) if value.isdigit() else (1, value))
+            sampled = sorted(set(oldest + random_sample), key=lambda value: (0, int(value)) if value.isdigit() else (1, value))
+            selection_for_pmid = {pmid: "oldest" for pmid in oldest}
+            selection_for_pmid.update({pmid: "random" for pmid in random_sample})
+        sampled_set = set(sampled)
+        selected_indices = group.index[group["pmid"].isin(sampled_set)]
+        result.loc[selected_indices, "selected_for_sampling"] = True
+        result.loc[selected_indices, "sample_selection"] = result.loc[selected_indices, "pmid"].map(selection_for_pmid)
+    return result
+
+
 def parse_article_xml(payload: str) -> list[dict[str, Any]]:
     root = ET.fromstring(payload)
     rows = []
@@ -383,6 +436,9 @@ def acquire_pubmed(
     max_fetch_batches: int | None = None,
     retmax: int = 10000,
     batch_size: int = 200,
+    max_pmids_per_species: int | None = 200,
+    oldest_pmids_per_species: int = 30,
+    pmid_sample_random_seed: int = 42,
     progress_every: int = 25,
     expand_overflow: bool = False,
     requester=None,
@@ -489,7 +545,15 @@ def acquire_pubmed(
     match_frame = pd.DataFrame(associations, columns=["organism_id", "organism_group", "accepted_name", "pmid", "matched_names", "query_id", "query_hash", "selected_for_fetch"])
     if not match_frame.empty:
         match_frame = match_frame.drop_duplicates(["organism_id", "pmid"])
-    missing_pmids, batches = _fetch_batches(match_frame, article_cache, batch_size=batch_size, max_batches=int(max_fetch_batches) if max_fetch_batches is not None else None)
+    match_frame = sample_species_pmids(
+        match_frame,
+        max_pmids_per_species=max_pmids_per_species,
+        oldest_pmids_per_species=oldest_pmids_per_species,
+        random_seed=pmid_sample_random_seed,
+    )
+    match_frame["selected_for_fetch"] = False
+    sample_matches = match_frame.loc[match_frame["selected_for_sampling"]].copy()
+    missing_pmids, batches = _fetch_batches(sample_matches, article_cache, batch_size=batch_size, max_batches=int(max_fetch_batches) if max_fetch_batches is not None else None)
     def fetch(batch: list[str]) -> list[dict[str, Any]]:
         parse_error = None
         for attempt in range(3):
@@ -511,7 +575,12 @@ def acquire_pubmed(
             return fetch(batch[:midpoint]) + fetch(batch[midpoint:])
         raise RuntimeError("PubMed returned malformed XML for a single-PMID fetch after retries.") from parse_error
     if log:
-        print(f"PubMed abstract fetch: {len(article_cache):,} cached; {len(missing_pmids):,} missing across {len(batches):,} batches.")
+        sampled_rows = sample_matches[["organism_id", "pmid"]].drop_duplicates()
+        sampled_count = len(sampled_rows)
+        species_count = sample_matches["organism_id"].nunique()
+        cap_text = "all PMIDs" if max_pmids_per_species is None else f"up to {int(max_pmids_per_species)} per species (oldest {min(int(oldest_pmids_per_species), int(max_pmids_per_species))}, then seed {int(pmid_sample_random_seed)} sample)"
+        print(f"PubMed abstract sample: {sampled_count:,} species–PMID rows across {species_count:,} species; {cap_text}.")
+        print(f"PubMed abstract fetch: {len(article_cache):,} cached; {len(missing_pmids):,} sampled PMIDs missing across {len(batches):,} batches.")
     fetch_start = time.monotonic()
     for index, batch_rows in enumerate(_bounded_results(batches, fetch, max_workers), 1):
         for item in batch_rows:
@@ -519,13 +588,17 @@ def acquire_pubmed(
         if log and (index % progress_every == 0 or index == len(batches)):
             rate = index / max(0.01, time.monotonic() - fetch_start)
             print(f"PubMed fetch: {index:,}/{len(batches):,} batches; ETA {(len(batches)-index)/rate/60:.1f} min.")
-    abstracts_frame = pd.DataFrame(article_cache.values())
+    sampled_pmids = set(sample_matches["pmid"].astype(str))
+    abstracts_frame = pd.DataFrame([record for pmid, record in article_cache.items() if str(pmid) in sampled_pmids])
     if not match_frame.empty:
         if "pmid" in abstracts_frame and "abstract" in abstracts_frame:
             match_frame = match_frame.merge(abstracts_frame[["pmid", "abstract"]], on="pmid", how="left")
         else:
             match_frame["abstract"] = ""
-        match_frame["selected_for_fetch"] = match_frame["abstract"].fillna("").astype(str).str.strip().ne("")
+        match_frame["selected_for_fetch"] = (
+            match_frame["selected_for_sampling"]
+            & match_frame["abstract"].fillna("").astype(str).str.strip().ne("")
+        )
         match_frame = match_frame.drop(columns="abstract")
     atomic_parquet(match_frame, release / "species_abstracts.parquet")
     atomic_parquet(abstracts_frame, release / "abstracts.parquet")
@@ -546,6 +619,10 @@ def acquire_pubmed(
         "overflow_expanded_query_count": sum(bool(item.get("overflow_expanded")) for item in active_queries),
         "query_summary_by_group": active_group_summaries,
         "species_abstract_matches": len(match_frame),
+        "sampled_species_pmid_matches": int(match_frame["selected_for_sampling"].sum()) if not match_frame.empty else 0,
+        "sample_cap_per_species": max_pmids_per_species,
+        "oldest_pmids_per_species": int(oldest_pmids_per_species),
+        "pmid_sample_random_seed": int(pmid_sample_random_seed),
         "abstract_count": len(abstracts_frame),
         "cached_at": pd.Timestamp.utcnow().isoformat(),
     }
