@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 import xml.etree.ElementTree as ET
+from urllib.parse import urlencode
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Any
@@ -93,10 +94,22 @@ def _request(url: str, params: dict[str, Any], *, email: str, api_key: str | Non
     query = {**params, "tool": "pathogen_atlas_v3", "email": email}
     if api_key:
         query["api_key"] = api_key
+    encoded_length = len(url) + 1 + len(urlencode(query, doseq=True))
+    use_post = requester is None and encoded_length > 1500
     for attempt in range(retries + 1):
         limiter.wait()
         try:
-            response = requester(url, params=query, timeout=120) if requester is not None else _thread_session().get(url, params=query, timeout=120)
+            if requester is not None:
+                # Keep the injected requester interface stable for deterministic tests.
+                response = requester(url, params=query, timeout=120)
+            elif use_post:
+                response = _thread_session().post(url, data=query, timeout=120)
+            else:
+                response = _thread_session().get(url, params=query, timeout=120)
+            if getattr(response, "status_code", None) == 414 and not use_post and requester is None:
+                # Some proxies apply a lower URL limit than the preflight bound.
+                use_post = True
+                response = _thread_session().post(url, data=query, timeout=120)
             response.raise_for_status()
             return response
         except requests.RequestException as exc:
