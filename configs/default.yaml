@@ -46,8 +46,12 @@ pubmed:
   # Standalone VMR abbreviations that collide with common human/biomedical
   # terms. Values remain in taxonomy provenance but are omitted from searches.
   exclude_ambiguous_aliases:
+    - cnv
+    - hrv
     - gamma
     - cd4
+    - pm2
+    - rsv
   sampling:
     max_pmids_per_species: 200
     oldest_pmids_per_species: 30
