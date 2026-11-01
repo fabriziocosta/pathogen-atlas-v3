@@ -135,12 +135,16 @@ def run_decision_stage(
     max_workers: int = 32,
     client: DecisionClient | None = None,
     checkpoint_every: int = 25,
+    log_every: int | None = None,
     balance_poll_interval_seconds: float = 60.0,
     log: bool = True,
 ) -> pd.DataFrame:
     """Run one question or grouped question set per organism/PMID and resume safely."""
     if max_workers < 1 or (max_calls is not None and max_calls < 0) or balance_poll_interval_seconds < 0:
         raise ValueError("max_workers must be >= 1, max_calls non-negative or None, and balance polling interval non-negative.")
+    log_every = checkpoint_every if log_every is None else int(log_every)
+    if checkpoint_every < 1 or log_every < 1:
+        raise ValueError("checkpoint_every and log_every must be positive.")
     prepared = prepare_species_abstracts(abstracts, species_matches)
     if client is None:
         client = OpenRouterJevClient()
@@ -213,12 +217,14 @@ def run_decision_stage(
                 row, qmap = next(tasks)
                 in_flight.add(executor.submit(_call_group, row, kind=kind, questions=qmap, run_id=run_id, question_version=question_version, profile_version=profile_version, client=client, raw_path=raw_path))
             completed = 0
+            failed_total = 0
             while in_flight:
                 done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
                 for future in done:
                     rows, _raw = future.result()
                     new_rows.extend(rows)
                     completed += 1
+                    failed_total += sum(r["status"] != SUCCESS for r in rows)
                     try:
                         row, qmap = next(tasks)
                         in_flight.add(executor.submit(_call_group, row, kind=kind, questions=qmap, run_id=run_id, question_version=question_version, profile_version=profile_version, client=client, raw_path=raw_path))
@@ -243,11 +249,10 @@ def run_decision_stage(
                     updated = updated.drop_duplicates(key_cols, keep="last")
                     atomic_parquet(updated, output_path)
                     ledger = updated
-                    if log:
+                    if log and (completed % log_every < len(done) or completed == total):
                         elapsed = time.monotonic() - started
                         rate = completed / elapsed if elapsed else 0
                         eta = (total - completed) / rate if rate else 0
-                        failed = sum(r["status"] != SUCCESS for r in new_rows)
                         balance_note = ""
                         now = time.monotonic()
                         if callable(balance_method) and now - last_balance_poll >= balance_poll_interval_seconds:
@@ -267,13 +272,16 @@ def run_decision_stage(
                                 balance_label = observed_label
                         if latest_balance is not None:
                             if balance_label == "account credits" and credit_burn_per_second and credit_burn_per_second > 0:
-                                credit_eta_hours = latest_balance / credit_burn_per_second / 3600
-                                balance_note = f"; credits ${latest_balance:.4f}; credit ETA {credit_eta_hours:.2f} h"
+                                projected_balance = latest_balance - credit_burn_per_second * eta
+                                if projected_balance >= 0:
+                                    balance_note = f"; credits ${latest_balance:.4f}; est. credits at stage end ${projected_balance:.4f}"
+                                else:
+                                    balance_note = f"; credits ${latest_balance:.4f}; est. shortfall at stage end ${abs(projected_balance):.4f}"
                             elif balance_label == "account credits":
-                                balance_note = f"; credits ${latest_balance:.4f}; credit ETA calculating"
+                                balance_note = f"; credits ${latest_balance:.4f}; est. credits at stage end calculating"
                             else:
                                 balance_note = f"; {balance_label} ${latest_balance:.4f}"
-                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed:,}; ETA {eta/3600:.2f} h{balance_note}.")
+                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed_total:,}; ETA {eta/3600:.2f} h{balance_note}.")
                     new_rows.clear()
     if not output_path.exists():
         atomic_parquet(pd.DataFrame(columns=["organism_id", "organism_group", "pmid", "decision_kind", "feature_id", "input_hash", "provider", "model", "question_version", "profile_version", "run_id", "p_yes", "status", "attempts", "error", "completed_at", "raw_response_path"]), output_path)
