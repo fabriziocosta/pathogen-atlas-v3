@@ -45,15 +45,15 @@
         <div class="plot-count" id="catalog-total">Loading species…</div>
       </div>
       <div class="explorer-controls">
+        <fieldset class="field group-field"><legend class="group-selector-title">Organism group</legend><div class="group-selector" role="radiogroup" aria-label="Organism group"><label class="group-choice"><input type="radio" name="organism-group" value="bacteria" checked><span>bacteria</span></label><label class="group-choice"><input type="radio" name="organism-group" value="viruses"><span>virus</span></label><label class="group-choice"><input type="radio" name="organism-group" value="fungi"><span>fungi</span></label></div><select id="group" aria-hidden="true" tabindex="-1"></select></fieldset>
         <div class="control-grid">
-          <fieldset class="field group-field"><legend class="group-selector-title">Organism group</legend><div class="group-selector" role="radiogroup" aria-label="Organism group"><label class="group-choice"><input type="radio" name="organism-group" value="bacteria" checked><span>bacteria</span></label><label class="group-choice"><input type="radio" name="organism-group" value="viruses"><span>virus</span></label><label class="group-choice"><input type="radio" name="organism-group" value="fungi"><span>fungi</span></label></div><select id="group" aria-hidden="true" tabindex="-1"></select></fieldset>
-          <div class="field"><label for="search">Search species</label><input id="search" type="search" placeholder="Name, synonym or taxonomic group…" autocomplete="off"></div>
+          <div class="field"><label for="search">Search species</label><input id="search" type="search" placeholder="Name or taxonomic group…" autocomplete="off"></div>
           <div class="field"><label for="color">Color points by</label><select id="color"></select></div>
         </div>
         <div class="control-options">
           <div class="toggle-row">
             <label class="size-toggle" for="size-index" title="Marker area follows the normalized Pathogenic Interest Index, from zero to one."><input id="size-index" type="checkbox" checked><span>Size by Pathogenic Interest Index</span></label>
-            <div class="minimum-filter"><label for="minimum" title="Only show species with at least this many accepted pathogen PMIDs.">Minimum accepted pathogen PMIDs</label><input id="minimum" type="number" min="0" value="0" inputmode="numeric"></div>
+            <div class="minimum-filter"><label for="minimum" title="Only show species with at least this many accepted pathogen PMIDs.">Min supporting PMIDs</label><input id="minimum" type="number" min="0" value="0" inputmode="numeric"></div>
           </div>
           <div class="control-actions">
             <details class="appearance-menu">
