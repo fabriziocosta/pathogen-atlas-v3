@@ -60,11 +60,13 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     v2_species_path = v2_release_root / "species_summary.parquet"
     v2_evidence_path = v2_release_root / "evidence_records.parquet"
     v2_feature_matrix_path = v2_release_root / "species_feature_matrix.parquet"
+    v2_feature_summary_path = v2_release_root / "species_feature_summary.parquet"
     v2_answers_path = v2_release_root / "domain_expert_answers.parquet"
     v2_coordinates_path = ROOT / "data/migration/version2_snapshot/05_plots/release/species_feature_space_coordinates.parquet"
     v2_species = pd.read_parquet(v2_species_path) if v2_species_path.exists() else pd.DataFrame()
     v2_evidence = pd.read_parquet(v2_evidence_path) if v2_evidence_path.exists() else pd.DataFrame()
     v2_feature_matrix = pd.read_parquet(v2_feature_matrix_path) if v2_feature_matrix_path.exists() else pd.DataFrame()
+    v2_feature_summary = pd.read_parquet(v2_feature_summary_path) if v2_feature_summary_path.exists() else pd.DataFrame()
     v2_answers = pd.read_parquet(v2_answers_path) if v2_answers_path.exists() else pd.DataFrame()
     v2_coordinates = pd.read_parquet(v2_coordinates_path) if v2_coordinates_path.exists() else pd.DataFrame()
     v2_summary_by_name = {
@@ -82,6 +84,13 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
             v2_features_by_name[str(row.canonical_species).casefold()] = {
                 column.removeprefix("feature_"): (None if pd.isna(getattr(row, column)) else float(getattr(row, column)))
                 for column in feature_columns
+            }
+    v2_feature_counts_by_name: dict[str, dict] = {}
+    if not v2_feature_summary.empty:
+        for row in v2_feature_summary.itertuples(index=False):
+            v2_feature_counts_by_name.setdefault(str(row.canonical_species).casefold(), {})[str(row.question_id)] = {
+                "n_yes": int(row.n_yes) if pd.notna(row.n_yes) else 0,
+                "n_scored": int(row.n_answered) if pd.notna(row.n_answered) else 0,
             }
     if not coords.empty:
         # The shared coordinates provide one cross-domain placement. A domain-specific
@@ -120,10 +129,16 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     wikipedia_by_name = {str(r.canonical_species).casefold(): r.wikipedia_url for r in legacy_wikipedia.itertuples(index=False) if pd.notna(getattr(r, "wikipedia_url", None)) and str(r.wikipedia_url).strip()} if not legacy_wikipedia.empty else {}
     gbif_by_name = {str(r.canonical_species).casefold(): r.gbif_url for r in legacy_gbif.itertuples(index=False) if pd.notna(getattr(r, "gbif_url", None)) and str(r.gbif_url).strip()} if not legacy_gbif.empty else {}
     feature_map: dict[str, dict] = {}
+    feature_counts_map: dict[str, dict] = {}
     feature_definitions = {}
     if not features.empty:
         for row in features.itertuples(index=False):
-            feature_map.setdefault(str(row.organism_id), {})[str(row.feature_id)] = None if pd.isna(row.share_yes) else float(row.share_yes)
+            organism_id, feature_id = str(row.organism_id), str(row.feature_id)
+            feature_map.setdefault(organism_id, {})[feature_id] = None if pd.isna(row.share_yes) else float(row.share_yes)
+            feature_counts_map.setdefault(organism_id, {})[feature_id] = {
+                "n_yes": int(row.n_yes) if pd.notna(row.n_yes) else 0,
+                "n_scored": int(row.n_scored) if pd.notna(row.n_scored) else 0,
+            }
             feature_definitions[str(row.feature_id)] = {"label": str(row.feature_id).replace("_", " ").upper(), "definition": "" if pd.isna(row.definition) else str(row.definition), "category": "" if pd.isna(row.category) else str(row.category)}
     catalog, profiles = load_feature_catalog(ROOT / "configs/features.yaml", ROOT / "configs/feature_profiles.yaml", allow_provisional=True)
     for fid, row in catalog["features"].items():
@@ -238,6 +253,7 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         oid = str(item["organism_id"])
         item["synonyms"] = [name for name in aliases_by_id.get(oid, []) if name.casefold() != str(item.get("accepted_name", "")).casefold()]
         item["feature_values"] = feature_map.get(oid, {})
+        item["feature_counts"] = feature_counts_map.get(oid, {})
         item["evidence_file"] = evidence_files.get(oid)
         name_key = str(item.get("accepted_name", "")).casefold()
         # The released index table is the source of both the score and its
@@ -248,6 +264,7 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         if item.get("organism_group") == "bacteria" and name_key in v2_summary_by_name:
             legacy = v2_summary_by_name[name_key]
             item["feature_values"] = v2_features_by_name.get(name_key, {})
+            item["feature_counts"] = v2_feature_counts_by_name.get(name_key, {})
         legacy_name_fallback = name_key if str(item.get("organism_group", "")).casefold() == "bacteria" else None
         item["wikipedia_url"] = wikipedia_by_id.get(oid) or (wikipedia_by_name.get(legacy_name_fallback) if legacy_name_fallback else None)
         item["gbif_url"] = gbif_by_id.get(oid) or (gbif_by_name.get(legacy_name_fallback) if legacy_name_fallback else None)
