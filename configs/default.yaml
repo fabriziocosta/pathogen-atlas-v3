@@ -66,7 +66,9 @@ decisions:
   timeout_seconds: 90
   retries: 3
   backoff_seconds: 1.0
-  max_workers: 32
+  # Increase cautiously: the Jev upstream provider controls its own capacity.
+  # 48 is the initial higher-throughput setting; reduce if 429s become frequent.
+  max_workers: 48
   max_calls: null
   pathogen_question_version: human-disease-attribution-v3.1
   feature_question_set_version: multi-domain-features-v3.2
@@ -104,3 +106,4 @@ logging:
   progress_every: 100
   show_eta: true
   show_openrouter_balance: true
+  balance_poll_interval_seconds: 60

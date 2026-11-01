@@ -135,11 +135,12 @@ def run_decision_stage(
     max_workers: int = 32,
     client: DecisionClient | None = None,
     checkpoint_every: int = 25,
+    balance_poll_interval_seconds: float = 60.0,
     log: bool = True,
 ) -> pd.DataFrame:
     """Run one question or grouped question set per organism/PMID and resume safely."""
-    if max_workers < 1 or (max_calls is not None and max_calls < 0):
-        raise ValueError("max_workers must be >= 1 and max_calls must be non-negative or None.")
+    if max_workers < 1 or (max_calls is not None and max_calls < 0) or balance_poll_interval_seconds < 0:
+        raise ValueError("max_workers must be >= 1, max_calls non-negative or None, and balance polling interval non-negative.")
     prepared = prepare_species_abstracts(abstracts, species_matches)
     if client is None:
         client = OpenRouterJevClient()
@@ -189,15 +190,20 @@ def run_decision_stage(
             if submitted >= total:
                 break
     started = time.monotonic()
+    balance_method = getattr(client, "remaining_balance", None)
+    starting_balance: float | None = None
+    balance_label = "remaining balance unavailable"
+    latest_balance: float | None = None
+    latest_balance_at: float | None = None
+    last_balance_poll = 0.0
+    credit_burn_per_second: float | None = None
     if log:
         print(f"{kind}: {len(prepared):,} pairs; {len(prepared)-pending_total:,} cached; {total:,} calls scheduled ({pending_total:,} pending); up to {max_workers} concurrent requests.")
-        balance_method = getattr(client, "remaining_balance", None)
         if total and callable(balance_method):
             starting_balance, balance_label = balance_method()
+            latest_balance = starting_balance
+            latest_balance_at = last_balance_poll = time.monotonic()
             print(f"{kind}: {balance_label} at start: ${starting_balance:.4f}." if starting_balance is not None else f"{kind}: {balance_label}.")
-        else:
-            starting_balance = None
-            balance_label = "remaining balance"
     new_rows: list[dict[str, Any]] = []
     if total:
         tasks = iter(pending_tasks())
@@ -242,11 +248,36 @@ def run_decision_stage(
                         rate = completed / elapsed if elapsed else 0
                         eta = (total - completed) / rate if rate else 0
                         failed = sum(r["status"] != SUCCESS for r in new_rows)
-                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed:,}; ETA {eta/60:.1f} min.")
+                        balance_note = ""
+                        now = time.monotonic()
+                        if callable(balance_method) and now - last_balance_poll >= balance_poll_interval_seconds:
+                            observed_balance, observed_label = balance_method()
+                            last_balance_poll = now
+                            if observed_balance is not None:
+                                if latest_balance is not None and latest_balance_at is not None and observed_label == balance_label:
+                                    sample_elapsed = now - latest_balance_at
+                                    sample_burn = (latest_balance - observed_balance) / sample_elapsed if sample_elapsed > 0 else 0
+                                    if sample_burn > 0:
+                                        credit_burn_per_second = sample_burn
+                                    elif observed_balance > latest_balance:
+                                        # A top-up invalidates the previous observed depletion rate.
+                                        credit_burn_per_second = None
+                                latest_balance = float(observed_balance)
+                                latest_balance_at = now
+                                balance_label = observed_label
+                        if latest_balance is not None:
+                            if balance_label == "account credits" and credit_burn_per_second and credit_burn_per_second > 0:
+                                credit_eta_hours = latest_balance / credit_burn_per_second / 3600
+                                balance_note = f"; credits ${latest_balance:.4f}; credit ETA {credit_eta_hours:.2f} h"
+                            elif balance_label == "account credits":
+                                balance_note = f"; credits ${latest_balance:.4f}; credit ETA calculating"
+                            else:
+                                balance_note = f"; {balance_label} ${latest_balance:.4f}"
+                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed:,}; ETA {eta/3600:.2f} h{balance_note}.")
                     new_rows.clear()
     if not output_path.exists():
         atomic_parquet(pd.DataFrame(columns=["organism_id", "organism_group", "pmid", "decision_kind", "feature_id", "input_hash", "provider", "model", "question_version", "profile_version", "run_id", "p_yes", "status", "attempts", "error", "completed_at", "raw_response_path"]), output_path)
-    if log and total and callable(getattr(client, "remaining_balance", None)):
+    if log and total and callable(balance_method):
         ending_balance, _ = client.remaining_balance()
         if starting_balance is not None and ending_balance is not None:
             print(f"{kind}: remaining {balance_label}: ${ending_balance:.4f}; change this stage: ${starting_balance-ending_balance:.4f}.")
