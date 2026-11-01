@@ -7,7 +7,8 @@ sources:
   fungi:
     adapter: species_fungorum
     path: data/source_taxonomy/fungi/SFPK_Published_Names_Export_16102026.zip
-    release: "Species Fungorum snapshot archived 12 October 2026; export 16 October 2026"
+    release: Species Fungorum snapshot archived 12 October 2026; export 16 October
+      2026
     source_url: https://sftp.kew.org/pub/data-repositories/SpeciesFungorum/SFPK%20-%20Published%20Names%20Export%2016102026.zip
     license: CC-BY-3.0
   viruses:
