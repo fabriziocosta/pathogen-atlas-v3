@@ -142,6 +142,7 @@ def run_phase2_pilot(config_path: str = "configs/default.yaml", *, per_group: in
         request_delay_seconds=request_delay_seconds, max_calls=None,
         max_fetch_batches=max_fetch_batches, retmax=retmax, batch_size=batch_size,
         progress_every=int(config.get("logging", {}).get("progress_every", 100)), log=log,
+        excluded_ambiguous_aliases=config.get("pubmed", {}).get("exclude_ambiguous_aliases", []),
     )
     metadata_path = root / "release" / "acquisition_metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))

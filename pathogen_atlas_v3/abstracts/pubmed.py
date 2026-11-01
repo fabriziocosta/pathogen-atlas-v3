@@ -86,17 +86,22 @@ def build_name_query(names: list[str]) -> str:
     return f"({quoted}) AND {human_context}"
 
 
-def filter_pubmed_search_aliases(aliases: pd.DataFrame) -> tuple[pd.DataFrame, int]:
-    """Exclude ICTV VMR isolate designations from species-level PubMed searches.
+def filter_pubmed_search_aliases(
+    aliases: pd.DataFrame,
+    *,
+    excluded_ambiguous_aliases: list[str] | tuple[str, ...] = (),
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Remove isolate designations and configured ambiguous VMR terms from search aliases.
 
     VMR isolate designations identify particular isolates (and can be generic
-    words such as ``Common`` or ``Type``), rather than taxonomic names. Keep
-    those values in the variant/provenance tables, but do not search PubMed for
-    them as species aliases. The source record is retained in the alias table,
-    allowing this filter to also protect existing Phase 1 releases.
+    words such as ``Common`` or ``Type``), rather than taxonomic names. Some
+    abbreviation fields also contain ambiguous terms such as ``Gamma`` or
+    ``CD4``. Keep all such values in taxonomy provenance, but omit them from
+    PubMed species searches. Reading source records lets the same filter
+    protect existing Phase 1 releases.
     """
     if aliases.empty or "source_record_json" not in aliases.columns or "name" not in aliases.columns:
-        return aliases.copy(), 0
+        return aliases.copy(), {"ictv_isolate_designations": 0, "configured_ambiguous_aliases": 0}
 
     def normalize(value: Any) -> str:
         if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -108,27 +113,46 @@ def filter_pubmed_search_aliases(aliases: pd.DataFrame) -> tuple[pd.DataFrame, i
             pass
         return " ".join(str(value).split()).casefold()
 
-    exclude = []
+    exclude_designation = []
+    exclude_ambiguous = []
+    ambiguous_terms = {normalize(value) for value in excluded_ambiguous_aliases if normalize(value)}
     for row in aliases.itertuples(index=False):
         source = normalize(getattr(row, "source", ""))
         if source != "ictv_vmr":
-            exclude.append(False)
+            exclude_designation.append(False)
+            exclude_ambiguous.append(False)
             continue
         payload = getattr(row, "source_record_json", None)
         try:
             record = json.loads(payload) if isinstance(payload, str) else payload
         except (TypeError, ValueError):
             record = None
-        designation = ""
+        designations: set[str] = set()
         if isinstance(record, dict):
-            designation = next(
-                (normalize(value) for key, value in record.items()
+            designation_value = next(
+                (value for key, value in record.items()
                  if normalize(key) in {"virus isolate designation", "isolate designation"}),
                 "",
             )
-        exclude.append(bool(designation and normalize(getattr(row, "name", "")) == designation))
-    mask = pd.Series(exclude, index=aliases.index, dtype=bool)
-    return aliases.loc[~mask].copy(), int(mask.sum())
+            # ICTV VMR cells can contain lists such as "prototype; p". The
+            # adapter emits each component as its own alias, so compare against
+            # each normalized value as well as the unsplit cell.
+            designation_text = normalize(designation_value)
+            if designation_text:
+                designations.add(designation_text)
+                designations.update(
+                    part for part in re.split(r"\s*[;|,]\s*", designation_text) if part
+                )
+        alias_name = normalize(getattr(row, "name", ""))
+        exclude_designation.append(bool(alias_name and alias_name in designations))
+        exclude_ambiguous.append(bool(alias_name and alias_name in ambiguous_terms))
+    designation_mask = pd.Series(exclude_designation, index=aliases.index, dtype=bool)
+    ambiguous_mask = pd.Series(exclude_ambiguous, index=aliases.index, dtype=bool) & ~designation_mask
+    mask = designation_mask | ambiguous_mask
+    return aliases.loc[~mask].copy(), {
+        "ictv_isolate_designations": int(designation_mask.sum()),
+        "configured_ambiguous_aliases": int(ambiguous_mask.sum()),
+    }
 
 
 def _thread_session() -> requests.Session:
@@ -505,6 +529,7 @@ def acquire_pubmed(
     pmid_sample_random_seed: int = 42,
     progress_every: int = 25,
     expand_overflow: bool = False,
+    excluded_ambiguous_aliases: list[str] | tuple[str, ...] = (),
     requester=None,
     log: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -536,7 +561,9 @@ def acquire_pubmed(
                 item = json.loads(line); article_cache[str(item["pmid"])] = item
             except (ValueError, KeyError):
                 continue
-    searchable_aliases, excluded_isolate_designations = filter_pubmed_search_aliases(aliases)
+    searchable_aliases, excluded_alias_counts = filter_pubmed_search_aliases(
+        aliases, excluded_ambiguous_aliases=excluded_ambiguous_aliases,
+    )
     aliases_by_id = searchable_aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not searchable_aliases.empty else {}
     tasks = []
     active_query_ids: set[str] = set()
@@ -566,7 +593,7 @@ def acquire_pubmed(
     if max_calls is not None:
         tasks = tasks[:int(max_calls)]
     if log:
-        print(f"PubMed search: {len(species):,} species rows; {excluded_isolate_designations:,} ICTV isolate-designation aliases excluded; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
+        print(f"PubMed search: {len(species):,} species rows; excluded aliases: {excluded_alias_counts['ictv_isolate_designations']:,} ICTV designations, {excluded_alias_counts['configured_ambiguous_aliases']:,} configured ambiguous terms; {len(query_cache):,} cached queries; {len(tasks):,} pending.")
     limiter = RateLimiter(request_delay_seconds)
     def search(task: tuple[Any, ...]) -> dict[str, Any]:
         row, names, query, digest, query_id, excluded_alias_count = task
