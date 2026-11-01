@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -111,7 +113,10 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     payload = {"release": "Pathogen Atlas V3", "species": species_rows, "features": feature_definitions,
                "groups": config["project"]["domains"], "coordinates_ready": bool(not coords.empty), "stats": stats}
     dist = ROOT / "sites/pathogen-atlas-explorer/dist"; dist.mkdir(parents=True, exist_ok=True)
-    (dist / "explorer-data.json").write_text(json.dumps(payload, ensure_ascii=False, default=str), encoding="utf-8")
+    json_path = dist / "explorer-data.json"
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, default=str), encoding="utf-8")
+    with json_path.open("rb") as source, gzip.open(dist / "explorer-data.json.gz", "wb", compresslevel=9) as compressed:
+        shutil.copyfileobj(source, compressed)
     print(f"Explorer data: {len(species_rows):,} species; {len(feature_definitions):,} features; {len(evidence_files):,} lazy evidence shards.")
     return payload
 

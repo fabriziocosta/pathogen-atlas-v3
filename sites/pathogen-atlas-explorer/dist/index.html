@@ -34,7 +34,7 @@
 <script>
 let DATA, selected=null, evidenceCache={};
 const fmt=n=>Number(n||0).toLocaleString();
-async function init(){try{const r=await fetch('explorer-data.json');if(!r.ok)throw new Error(`HTTP ${r.status}`);DATA=await r.json();}catch(e){document.getElementById('map').innerHTML='<div class="empty">Explorer data is temporarily unavailable. Please try again later.</div>';return}
+async function init(){try{const r=await fetch('explorer-data.json.gz');if(!r.ok)throw new Error(`HTTP ${r.status}`);if(!('DecompressionStream' in window))throw new Error('This browser cannot decompress the Explorer catalog.');const stream=r.body.pipeThrough(new DecompressionStream('gzip'));DATA=await new Response(stream).json();}catch(e){document.getElementById('map').innerHTML='<div class="empty">Explorer data is temporarily unavailable. Please try again later.</div>';return}
   const groups=document.getElementById('group'); for(const g of DATA.groups||[])groups.insertAdjacentHTML('beforeend',`<option value="${g}">${g}</option>`);
   document.getElementById('mapnote').textContent=DATA.coordinates_ready?'One fitted coordinate per species':'Taxonomy catalog; map coordinates are not released yet';
   const color=document.getElementById('color'); const ranks=[...new Set(DATA.species.flatMap(s=>Object.keys(s.taxonomy||{})))]; color.innerHTML='<option value="pathogenic_interest_index">Pathogenic Interest Index</option>'+Object.keys(DATA.features||{}).map(k=>`<option value="${k}">${DATA.features[k].label}</option>`).join('')+ranks.map(k=>`<option value="taxonomy:${k}">Taxonomy · ${k}</option>`).join('');

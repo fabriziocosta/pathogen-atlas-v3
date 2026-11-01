@@ -10,6 +10,7 @@
 *.pdf
 /data/**/*.png
 /sites/pathogen-atlas-explorer/dist/explorer-data.json
+/sites/pathogen-atlas-explorer/dist/explorer-data.json.gz
 /sites/pathogen-atlas-explorer/dist/evidence/
 !/assets/pathogen-atlas-logo.png
 

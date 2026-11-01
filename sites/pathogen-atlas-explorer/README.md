@@ -7,7 +7,7 @@ It is a static site. The HTML application is tracked in this repository; its gen
 To update the public data snapshot:
 
 1. Build the site data from the current V3 releases with `python sites/pathogen-atlas-explorer/scripts/build_data.py`.
-2. From `sites/pathogen-atlas-explorer/dist`, create `explorer-site-data.tar.gz` containing `explorer-data.json` and the `evidence/` directory (when present).
+2. From `sites/pathogen-atlas-explorer/dist`, create `explorer-site-data.tar.gz` containing `explorer-data.json.gz` and the `evidence/` directory (when present).
 3. Upload the archive to the existing `explorer-site-data` release with `gh release upload explorer-site-data explorer-site-data.tar.gz --repo fabriziocosta/pathogen-atlas-v3 --clobber`.
 4. Run the `Deploy Pathogen Atlas Explorer` workflow from GitHub Actions, or push a change to the Explorer HTML or this README.
 
