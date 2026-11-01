@@ -39,7 +39,7 @@ pubmed:
   email_env: NCBI_EMAIL
   api_key_env: NCBI_API_KEY
   tool: pathogen_atlas_v3
-  max_workers: 10
+  max_workers: 24
   request_delay_seconds: null
   batch_size: 200
   retmax: 10000
