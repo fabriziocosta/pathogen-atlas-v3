@@ -113,7 +113,7 @@ function render(){
   const missing=rows.filter((_,i)=>vals[i]==null);if(missing.length)traces.push(makeTrace(missing,null,{gray:true}));
  } else if(taxonomyColor){
   const categories=[...new Set(vals.filter(v=>v!=null))];const colors=vals.map(v=>v==null?null:categories.indexOf(v));
-  traces=[makeTrace(rows,colors)];const tr=traces[0];tr.marker.colorscale=cmap;tr.marker.cmin=0;tr.marker.cmax=Math.max(1,categories.length-1);tr.marker.colorbar={tickvals:categories.map((_,i)=>i),ticktext:categories};
+  traces=[makeTrace(rows,colors)];const tr=traces[0];tr.marker.colorscale=cmap;tr.marker.cmin=0;tr.marker.cmax=1;tr.marker.colorbar={title:key==='pathogenic_interest_index'?'Pathogenic Interest Index':key.split(':')[1],tickvals:categories.map((_,i)=>i),ticktext:categories};
  } else {
   const coloredRows=[],coloredValues=[],zeroRows=[],missingRows=[];
   rows.forEach((s,i)=>{if(vals[i]==null)missingRows.push(s);else if(Number(vals[i])===0)zeroRows.push(s);else{coloredRows.push(s);coloredValues.push(Number(vals[i]))}});
