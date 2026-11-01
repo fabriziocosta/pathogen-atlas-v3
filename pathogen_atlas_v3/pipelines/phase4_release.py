@@ -10,6 +10,7 @@ import pandas as pd
 
 from pathogen_atlas_v3.common.io import atomic_parquet, load_yaml
 from pathogen_atlas_v3.decisions.runner import prepare_species_abstracts
+from pathogen_atlas_v3.decisions.features import load_feature_catalog
 from pathogen_atlas_v3.tables.interest_index import build_pathogenic_interest_index
 
 
@@ -69,10 +70,16 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
     ].copy() if not ledger.empty else pd.DataFrame()
     if not features.empty:
         features = features.merge(current_pairs, on=["organism_id", "pmid", "input_hash"], how="inner", validate="many_to_one")
+        catalog, _ = load_feature_catalog("configs/features.yaml", "configs/feature_profiles.yaml", allow_provisional=True)
+        hierarchy = catalog["features"]
+        for column, key in (("dimension_id", "dimension_id"), ("dimension", "dimension_label"),
+                            ("category_id", "category_id"), ("category", "category"), ("definition", "definition")):
+            labels = {feature_id: feature.get(key) for feature_id, feature in hierarchy.items()}
+            features[column] = features["feature_id"].map(labels).where(features["feature_id"].isin(labels), features.get(column))
         features["p_yes"] = pd.to_numeric(features["p_yes"], errors="coerce")
         features["answer_yes"] = features["status"].astype(str).eq("completed") & features["p_yes"].ge(float(decision.get("feature_yes_threshold", .75)))
         features["scored"] = features["status"].astype(str).eq("completed") & features["p_yes"].notna()
-        feature_summary = features.groupby(["organism_id", "organism_group", "feature_id", "category", "definition"], dropna=False, as_index=False).agg(n_scored=("scored", "sum"), n_yes=("answer_yes", "sum"), p_yes_mean=("p_yes", "mean"))
+        feature_summary = features.groupby(["organism_id", "organism_group", "feature_id", "dimension_id", "dimension", "category_id", "category", "definition"], dropna=False, as_index=False).agg(n_scored=("scored", "sum"), n_yes=("answer_yes", "sum"), p_yes_mean=("p_yes", "mean"))
         feature_summary["share_yes"] = feature_summary["n_yes"] / feature_summary["n_scored"].replace(0, pd.NA)
         feature_summary["feature_profile_version"] = features["profile_version"].astype(str).iloc[0]
         feature_summary["evaluation_approved"] = bool(decision.get("release_evaluation_approved", False))

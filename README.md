@@ -24,4 +24,4 @@ The static Explorer source is in [`sites/pathogen-atlas-explorer`](sites/pathoge
 - `data/` holds the local V2 migration snapshot, caches, and generated releases. All data files are excluded from Git.
 - `docs/` records data contracts, scientific decisions, migration rules, and methods.
 
-See [the project workflow](docs/workflow.md) to install and run phases, [the multi-domain data model](docs/data_model.md) for organism and feature contracts, and [the embedding method](docs/embeddings.md) for species coordinates.
+See [the project workflow](docs/workflow.md) to install and run phases, [the multi-domain data model](docs/data_model.md) for organism and feature contracts, [the feature taxonomy decision](docs/feature_taxonomy_decision.md) for how feature concepts are organized and reviewed, and [the embedding method](docs/embeddings.md) for species coordinates.

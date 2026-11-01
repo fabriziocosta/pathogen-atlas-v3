@@ -6,7 +6,9 @@ The fungal snapshot supplies Species Fungorum accepted names and taxonomy togeth
 
 ## Feature catalogue
 
-`configs/features.yaml` is the versioned union of features, and `configs/feature_profiles.yaml` defines a stable order and applicability for each domain. Every feature has an immutable ID, display label, yes/no definition, answer type, question version, explicit applicability, evidence instructions, and a review state. A modified interpretation gets a new question version and cache key.
+`configs/features.yaml` is the versioned, editable hierarchy of features: **dimension → category → feature**. The dimension identifies what kind of information a feature measures; the category groups related concepts within that dimension; and the feature contains the actual question and scoring instructions. `configs/feature_profiles.yaml` defines the stable scoring order and applicability for each organism group. The loader flattens the hierarchy for the decision runner while preserving dimension and category metadata for the Explorer. Every feature keeps a stable ID, yes/no definition, answer type, question version, explicit applicability, evidence instructions, and review state. Reclassifying a feature does not change its scoring cache identity; changing its interpretation requires a new question version.
+
+The top-level dimensions and their scope are documented in [Feature taxonomy decision](feature_taxonomy_decision.md). In brief, they distinguish pathogen biology, transmission, reservoirs and exposure, clinical presentation, host factors, healthcare context, epidemiology and public health, and abstract reporting. Feature answers remain statements about what the abstract reports; they are not automatically claims of biological truth or causal validation.
 
 The 73 inherited bacteria questions preserve their legacy identifiers and source mapping. Fungal and viral candidates add organism-specific concepts. Cross-domain questions and domain-specific profiles are marked provisional until reviewed by domain experts and tested on labelled examples; provisional results are for bounded pilots. `not_scored` and `not_applicable` are not “no”.
 

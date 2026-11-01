@@ -14,6 +14,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from pathogen_atlas_v3.common.io import load_yaml  # noqa: E402
+from pathogen_atlas_v3.decisions.features import load_feature_catalog  # noqa: E402
 
 
 def _safe_json(value):
@@ -68,9 +69,13 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         for row in features.itertuples(index=False):
             feature_map.setdefault(str(row.organism_id), {})[str(row.feature_id)] = None if pd.isna(row.share_yes) else float(row.share_yes)
             feature_definitions[str(row.feature_id)] = {"label": str(row.feature_id).replace("_", " ").upper(), "definition": "" if pd.isna(row.definition) else str(row.definition), "category": "" if pd.isna(row.category) else str(row.category)}
-    config_features = load_yaml(ROOT / "configs/features.yaml").get("features", {})
-    for fid, row in config_features.items():
-        feature_definitions[fid] = {"label": row.get("label", fid), "definition": row.get("definition", "") or "", "category": row.get("category", "") or ""}
+    catalog, profiles = load_feature_catalog(ROOT / "configs/features.yaml", ROOT / "configs/feature_profiles.yaml", allow_provisional=True)
+    for fid, row in catalog["features"].items():
+        feature_definitions[fid] = {
+            "label": row.get("label", fid), "definition": row.get("definition", "") or "",
+            "dimension_id": row["dimension_id"], "dimension": row["dimension_label"],
+            "category_id": row["category_id"], "category": row["category_label"],
+        }
     evidence_path = release / "accepted_pathogen_evidence.parquet"
     evidence = pd.read_parquet(evidence_path) if evidence_path.exists() else pd.DataFrame()
     feature_decisions_path = release / "feature_decisions.parquet"
@@ -110,7 +115,19 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
              "accepted_species_pmid_records": int(species.get("n_pathogen_pmids", pd.Series(dtype=int)).fillna(0).sum()),
              "pubmed_search_records": int(species.get("n_pubmed_search_records", pd.Series(dtype=int)).fillna(0).sum()),
              "feature_count": len(feature_definitions)}
+    # Publish the same hierarchy used by the scoring config so the Explorer can
+    # present feature summaries as dimension > category > feature.
+    feature_hierarchy = []
+    for dimension_id, dimension in catalog["dimensions"].items():
+        categories = []
+        for category_id, category in dimension.get("categories", {}).items():
+            feature_ids = [fid for fid in category.get("features", {})]
+            if feature_ids:
+                categories.append({"id": category_id, "label": category["label"], "feature_ids": feature_ids})
+        if categories:
+            feature_hierarchy.append({"id": dimension_id, "label": dimension["label"], "categories": categories})
     payload = {"release": "Pathogen Atlas V3", "species": species_rows, "features": feature_definitions,
+               "feature_hierarchy": feature_hierarchy,
                "groups": config["project"]["domains"], "coordinates_ready": bool(not coords.empty), "stats": stats}
     dist = ROOT / "sites/pathogen-atlas-explorer/dist"; dist.mkdir(parents=True, exist_ok=True)
     json_path = dist / "explorer-data.json"

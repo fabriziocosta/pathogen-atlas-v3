@@ -79,7 +79,9 @@ def _response_rows(response: dict[str, Any], question_map: dict[str, dict[str, A
         except Exception as exc:
             p_yes, status, error = None, "failed", f"{type(exc).__name__}: {exc}"
         rows.append({**base, "feature_id": qid, "p_yes": p_yes, "status": status, "error": error,
-                     "category": question.get("category"), "definition": question.get("definition")})
+                     "dimension_id": question.get("dimension_id"), "dimension": question.get("dimension_label"),
+                     "category_id": question.get("category_id"), "category": question.get("category"),
+                     "definition": question.get("definition")})
     return rows
 
 
@@ -105,7 +107,9 @@ def _call_group(row: Any, *, kind: str, questions: dict[str, dict[str, Any]], ru
         base["attempts"] = int(getattr(exc, "attempts", 1))
         base["completed_at"] = datetime.now(timezone.utc).isoformat()
         status_rows = [{**base, "feature_id": qid, "p_yes": None, "status": "failed",
-                        "error": f"{type(exc).__name__}: {exc}", "category": q.get("category"), "definition": q.get("definition")} for qid, q in questions.items()]
+                        "error": f"{type(exc).__name__}: {exc}", "dimension_id": q.get("dimension_id"),
+                        "dimension": q.get("dimension_label"), "category_id": q.get("category_id"),
+                        "category": q.get("category"), "definition": q.get("definition")} for qid, q in questions.items()]
         raw = {**base, "state": state, "questions": list(questions), "error": f"{type(exc).__name__}: {exc}", "recorded_at": datetime.now(timezone.utc).isoformat()}
     with _raw_lock:
         append_jsonl(raw_path, raw)

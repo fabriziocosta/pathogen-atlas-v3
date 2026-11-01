@@ -13,11 +13,38 @@ from pathogen_atlas_v3.common.schemas import validate_domain
 def load_feature_catalog(catalog_path: str | Path, profile_path: str | Path, *, allow_provisional: bool = False) -> tuple[dict[str, Any], list[str]]:
     catalog = yaml.safe_load(Path(catalog_path).read_text(encoding="utf-8")) or {}
     profiles = yaml.safe_load(Path(profile_path).read_text(encoding="utf-8")) or {}
-    features = catalog.get("features", {})
-    if not features or catalog.get("version") is None:
-        raise ValueError("Feature catalogue needs a version and non-empty features map.")
+    if catalog.get("version") is None or catalog.get("schema_version") != 2:
+        raise ValueError("Feature catalogue needs a version and hierarchical schema_version: 2.")
+    dimensions = catalog.get("dimensions", {})
+    if not dimensions:
+        raise ValueError("Feature catalogue needs at least one top-level dimension.")
+    features: dict[str, dict[str, Any]] = {}
+    for dimension_id, dimension in dimensions.items():
+        for category_id, category in dimension.get("categories", {}).items():
+            for feature_id, source in category.get("features", {}).items():
+                if feature_id in features:
+                    raise ValueError(f"Feature ID {feature_id!r} appears more than once in the hierarchy.")
+                if source.get("feature_id", feature_id) != feature_id:
+                    raise ValueError(f"Feature key {feature_id!r} does not match its feature_id.")
+                feature = {
+                    **source,
+                    "feature_id": source.get("feature_id", feature_id),
+                    "dimension_id": dimension_id,
+                    "dimension_label": dimension.get("label", dimension_id),
+                    "category_id": category_id,
+                    "category_label": category.get("label", category_id),
+                    # Retain the legacy category field for release tables and
+                    # downstream readers while carrying the full hierarchy.
+                    "category": category_id,
+                }
+                features[feature_id] = feature
+    if not features:
+        raise ValueError("Feature catalogue hierarchy has no features.")
+    # Keep the nested source of truth and expose a normalized flat lookup to the
+    # scoring pipeline, where feature IDs are used as stable cache keys.
+    catalog["features"] = features
     for feature_id, feature in features.items():
-        required = {"feature_id", "definition", "question_version", "organism_groups", "answer_type", "instructions", "criteria", "review_status"}
+        required = {"feature_id", "definition", "question_version", "organism_groups", "answer_type", "instructions", "criteria", "review_status", "dimension_id", "category_id"}
         if required - set(feature):
             raise ValueError(f"Feature {feature_id!r} missing fields {sorted(required - set(feature))}.")
         if feature["answer_type"] != "noul":
