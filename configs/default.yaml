@@ -7,7 +7,7 @@ project:
   - viruses
 run:
   organism_groups:
-  - viruses
+  - fungi
 paths:
   data_root: data
   migration_source: data/migration/version2_snapshot
@@ -20,8 +20,6 @@ paths:
   release_root: data/04_release
   embedding_root: data/05_embeddings
 migration:
-  # V2's 73 bacterial feature definitions match V3's bacteria profile. Import
-  # only when the sampled pair, aliases, title and abstract are unchanged.
   seed_v2_bacteria_decisions_as_v3: true
 taxonomy:
   bacteria:
@@ -43,23 +41,10 @@ pubmed:
   email_env: NCBI_EMAIL
   api_key_env: NCBI_API_KEY
   tool: pathogen_atlas_v3
-  max_workers: 48
+  max_workers: 10
   request_delay_seconds: null
   batch_size: 200
   retmax: 10000
-  # Standalone VMR abbreviations that collide with common human/biomedical
-  # terms. Values remain in taxonomy provenance but are omitted from searches.
-  exclude_ambiguous_aliases:
-    - cnv
-    - hrv
-    - gamma
-    - cd4
-    - pm2
-    - rsv
-  sampling:
-    max_pmids_per_species: 200
-    oldest_pmids_per_species: 30
-    random_seed: 42
   checkpoint_every: 100
   max_calls: null
   max_fetch_batches: null
@@ -70,21 +55,17 @@ decisions:
   timeout_seconds: 90
   retries: 3
   backoff_seconds: 1.0
-  # Increase cautiously: the Jev upstream provider controls its own capacity.
-  # Experimental concurrency; reduce if repeated upstream 429s or latency
-  # spikes appear. V2 completed a large Jev run with 128 workers.
   max_workers: 1024
   max_calls: null
   pathogen_question_version: human-disease-attribution-v3.1
   feature_question_set_version: multi-domain-features-v3.2
   pathogen_threshold: 0.75
   feature_yes_threshold: 0.75
-  # A sampled abstract at or above the pathogen gate is accepted evidence.
   release_evaluation_approved: true
   cost_estimate:
     expected_pathogen_fraction: 0.5
     input_tokens_per_gate_call: 1200
-    input_tokens_per_feature_call: 12000
+    input_tokens_per_feature_call: 4200
     output_tokens_per_call: 500
     input_usd_per_million_tokens: 0.042
     output_usd_per_million_tokens: 0.0
@@ -109,9 +90,6 @@ embedding:
   mst_representatives_per_component: 10
   device: auto
 logging:
-  progress_every: 5000
-  feature_progress_every: 100
-  checkpoint_every: 100
+  progress_every: 100
   show_eta: true
   show_openrouter_balance: true
-  balance_poll_interval_seconds: 60
