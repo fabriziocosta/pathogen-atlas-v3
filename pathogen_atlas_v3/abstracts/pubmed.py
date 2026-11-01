@@ -266,6 +266,38 @@ def _request(url: str, params: dict[str, Any], *, email: str, api_key: str | Non
     raise RuntimeError("NCBI E-utilities request failed; URL and credentials redacted.")
 
 
+def _request_json(url: str, params: dict[str, Any], *, email: str, api_key: str | None, limiter: RateLimiter, requester=None, retries: int = 3) -> dict[str, Any]:
+    """Request a JSON response, retrying transient malformed success bodies.
+
+    E-utilities and intermediaries can occasionally return a truncated or
+    otherwise invalid body with HTTP 200. HTTP retries in ``_request`` cannot
+    catch that case, and allowing ``Response.json()`` to escape would abort the
+    whole concurrent search batch. Do not include response bodies or URLs in
+    errors because they can contain query details or credentials.
+    """
+    response = None
+    parse_error = None
+    for attempt in range(retries + 1):
+        response = _request(url, params, email=email, api_key=api_key, limiter=limiter, requester=requester)
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            parse_error = exc
+            if attempt < retries:
+                time.sleep(min(30, 2 ** attempt))
+                continue
+            content_type = (getattr(response, "headers", {}) or {}).get("Content-Type", "unknown")
+            status = getattr(response, "status_code", "unknown")
+            raise RuntimeError(
+                f"NCBI returned invalid JSON after {retries + 1} attempts "
+                f"(HTTP {status}, Content-Type {content_type}); response body omitted."
+            ) from parse_error
+        if not isinstance(payload, dict):
+            raise RuntimeError("NCBI returned a JSON response with an unexpected top-level type.")
+        return payload
+    raise RuntimeError("NCBI returned invalid JSON; response body omitted.") from parse_error
+
+
 def _bounded_results(tasks, worker, max_workers: int):
     """Yield successes while keeping a small multiple of workers in flight.
 
@@ -666,8 +698,11 @@ def acquire_pubmed(
     limiter = RateLimiter(request_delay_seconds)
     def search(task: tuple[Any, ...]) -> dict[str, Any]:
         row, names, query, digest, query_id, excluded_alias_count = task
-        response = _request(f"{EUTILS}/esearch.fcgi", {"db": "pubmed", "term": query, "retmax": retmax, "retmode": "json"}, email=email, api_key=api_key, limiter=limiter, requester=requester)
-        result = response.json().get("esearchresult", {})
+        payload = _request_json(f"{EUTILS}/esearch.fcgi", {"db": "pubmed", "term": query, "retmax": retmax, "retmode": "json"}, email=email, api_key=api_key, limiter=limiter, requester=requester)
+        result = payload.get("esearchresult")
+        if not isinstance(result, dict):
+            error = payload.get("error", "missing esearchresult")
+            raise RuntimeError(f"NCBI returned an unexpected ESearch JSON response: {error}.")
         pmids = result.get("idlist", [])
         count = int(result.get("count", 0))
         return {"query_id": query_id, "query_hash": digest, "organism_id": row.organism_id, "organism_group": row.organism_group,
