@@ -27,6 +27,20 @@ EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 _session_local = threading.local()
 
 
+def _format_eta(seconds: float) -> str:
+    """Format an ETA using the largest useful units, down to whole minutes."""
+    total_minutes = max(0, int(seconds // 60))
+    if total_minutes == 0:
+        return "less than 1 minute"
+    days, remainder = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(remainder, 60)
+    parts = []
+    for value, unit in ((days, "day"), (hours, "hour"), (minutes, "minute")):
+        if value:
+            parts.append(f"{value} {unit}{'' if value == 1 else 's'}")
+    return " ".join(parts)
+
+
 def resolve_ncbi_email(email: str | None = None) -> str:
     """Use NCBI_EMAIL first, then the configured local Git author contact."""
     value = (email or os.environ.get("NCBI_EMAIL", "")).strip()
@@ -501,7 +515,7 @@ def _expand_query_overflow(
                         f"PubMed overflow: {total_requests:,} network segments completed; "
                         f"{query_index}/{len(query_rows)} query workers active; "
                         f"query {query_index} has {len(stack):,} queued segments; "
-                        f"ETA lower bound {len(stack) / rate / 60:.1f} min."
+                        f"ETA lower bound {_format_eta(len(stack) / rate)}."
                     )
             segment_count += 1
             count = int(cached.get("count", 0))
@@ -548,12 +562,12 @@ def _expand_query_overflow(
         if log:
             elapsed = max(0.01, time.monotonic() - started_all)
             rate = completed_queries / elapsed
-            eta = (len(query_rows) - completed_queries) / rate / 60 if rate else 0
+            eta = (len(query_rows) - completed_queries) / rate if rate else 0
             status = "complete" if updated["search_complete"] else "verification mismatch"
             print(
                 f"PubMed overflow: {completed_queries}/{len(query_rows)} species queries completed "
                 f"(query {query_index}, {len(updated['pmids']):,} PMIDs, "
-                f"{updated['overflow_segments']} segments, {status}); ETA {eta:.1f} min."
+                f"{updated['overflow_segments']} segments, {status}); ETA {_format_eta(eta)}."
             )
     return query_rows
 
@@ -662,11 +676,24 @@ def acquire_pubmed(
                 "search_incomplete_count": max(0, count - len(pmids)), "excluded_alias_count": excluded_alias_count,
                 "completed_at": time.time()}
     search_start = time.monotonic()
+    collected_pmids = {
+        str(pmid)
+        for query_id in active_query_ids
+        for pmid in query_cache.get(query_id, {}).get("pmids", [])
+    }
     for index, item in enumerate(_bounded_results(tasks, search, max_workers), 1):
         query_cache[item["query_id"]] = item; append_jsonl(query_path, item)
+        collected_pmids.update(str(pmid) for pmid in item.get("pmids", []))
         if log and (index % progress_every == 0 or index == len(tasks)):
             rate = index / max(0.01, time.monotonic() - search_start)
-            print(f"PubMed search: {index:,}/{len(tasks):,}; ETA {(len(tasks)-index)/rate/60:.1f} min.")
+            completed_total = sum(query_id in query_cache for query_id in active_query_ids)
+            progress = 100 * completed_total / max(1, len(species) - species_without_searchable_names)
+            eta = (len(tasks)-index) / rate if rate else 0
+            print(
+                f"PubMed search: {completed_total:,}/{len(species) - species_without_searchable_names:,} "
+                f"({progress:.1f}%); {len(collected_pmids):,} unique filtered PMIDs collected; "
+                f"ETA {_format_eta(eta)}."
+            )
     active_queries = [query_cache[query_id] for query_id in active_query_ids if query_id in query_cache]
     if expand_overflow:
         overflow_queries = [item for item in active_queries if not item.get("search_complete", True)]
@@ -735,7 +762,7 @@ def acquire_pubmed(
             article_cache[str(item["pmid"])] = item; append_jsonl(article_path, item)
         if log and (index % progress_every == 0 or index == len(batches)):
             rate = index / max(0.01, time.monotonic() - fetch_start)
-            print(f"PubMed fetch: {index:,}/{len(batches):,} batches; ETA {(len(batches)-index)/rate/60:.1f} min.")
+            print(f"PubMed fetch: {index:,}/{len(batches):,} batches; ETA {_format_eta((len(batches)-index)/rate)}.")
     sampled_pmids = set(sample_matches["pmid"].astype(str))
     abstracts_frame = pd.DataFrame([record for pmid, record in article_cache.items() if str(pmid) in sampled_pmids])
     if not match_frame.empty:
