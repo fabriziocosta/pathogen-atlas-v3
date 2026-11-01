@@ -3,12 +3,18 @@ project:
   schema_version: 1
   domains: [bacteria, fungi, viruses]
 
+# Select one, several, or all supported organism groups for Phases 2–5.
+# Phase 1 builds the complete master taxonomy so later runs can switch groups.
+run:
+  organism_groups: [viruses]
+
 paths:
   data_root: data
   migration_source: data/migration/version2_snapshot
   taxonomy_release: data/01_taxonomy/release
   pubmed_cache: data/02_pubmed/cache
   pubmed_release: data/02_pubmed/release
+  pubmed_domain_root: data/02_pubmed/domains
   decision_ledger: data/03_decisions/parsed/decision_ledger.parquet
   raw_responses: data/03_decisions/raw_responses/jev.jsonl
   release_root: data/04_release
@@ -35,6 +41,7 @@ pubmed:
   max_workers: 10
   request_delay_seconds: null
   batch_size: 200
+  retmax: 10000
   checkpoint_every: 100
   max_calls: null
   max_fetch_batches: null
@@ -58,8 +65,8 @@ decisions:
     input_tokens_per_gate_call: 1200
     input_tokens_per_feature_call: 4200
     output_tokens_per_call: 500
-    input_usd_per_million_tokens: null
-    output_usd_per_million_tokens: null
+    input_usd_per_million_tokens: 0.042
+    output_usd_per_million_tokens: 0.0
 
 embedding:
   cross_domain_feature_profile: shared-core-v1
@@ -83,6 +90,6 @@ embedding:
   device: auto
 
 logging:
-  progress_every: 25
+  progress_every: 100
   show_eta: true
   show_openrouter_balance: true

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
+import sys
 import time
 from threading import local
 from typing import Any, Protocol
@@ -11,6 +14,36 @@ import requests
 
 DEFAULT_JEV_MODEL = "typesafe/jev-1.14"
 DEFAULT_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
+
+
+def _openrouter_key_from_keychain() -> str | None:
+    """Read the existing OpenRouter Keychain entry used by the AMR project."""
+    if sys.platform != "darwin" or shutil.which("security") is None:
+        return None
+    service = os.environ.get("OPENROUTER_KEYCHAIN_SERVICE", "OpenRouter").strip()
+    account = os.environ.get("OPENROUTER_KEYCHAIN_ACCOUNT", "OPENROUTER_API_KEY").strip()
+    server = os.environ.get("OPENROUTER_KEYCHAIN_INTERNET_SERVER", "openrouter.ai").strip()
+    lookups = [
+        ("find-generic-password", service),
+        ("find-generic-password", server),
+        ("find-internet-password", server),
+    ]
+    for kind, name in lookups:
+        base = ["security", kind, "-s", name]
+        commands = [base + ["-a", account, "-w"], base + ["-w"]] if account else [base + ["-w"]]
+        for command in commands:
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=15)
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+    return None
+
+
+def openrouter_key_available() -> bool:
+    """Report whether a usable key is present without exposing its value."""
+    return bool(os.environ.get("OPENROUTER_API_KEY", "").strip() or _openrouter_key_from_keychain())
 
 
 class DecisionClient(Protocol):
@@ -27,7 +60,7 @@ class JevRequestError(RuntimeError):
 
 class OpenRouterJevClient:
     def __init__(self, *, api_key: str | None = None, model: str = DEFAULT_JEV_MODEL, endpoint: str = DEFAULT_DECISIONS_URL, timeout: float = 90, retries: int = 3, backoff_seconds: float = 1, session: requests.Session | None = None):
-        self.api_key = (api_key or os.environ.get("OPENROUTER_API_KEY", "")).strip()
+        self.api_key = (api_key or os.environ.get("OPENROUTER_API_KEY", "")).strip() or _openrouter_key_from_keychain() or ""
         if not self.api_key:
             raise ValueError("Set OPENROUTER_API_KEY before running Jev decisions.")
         if retries < 0 or timeout <= 0 or backoff_seconds < 0:

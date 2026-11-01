@@ -10,6 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from pathogen_atlas_v3.abstracts.pubmed import acquire_pubmed
+from pathogen_atlas_v3.common.config import selected_organism_groups
 from pathogen_atlas_v3.common.io import load_yaml
 
 
@@ -35,7 +36,8 @@ CURATED_NAMES = {
 }
 
 
-def select_pilot_species(species: pd.DataFrame, aliases: pd.DataFrame, *, per_group: int = 10, seed: int = 42) -> tuple[pd.DataFrame, dict]:
+def select_pilot_species(species: pd.DataFrame, aliases: pd.DataFrame, *, per_group: int = 10, seed: int = 42,
+                         organism_groups: list[str] | None = None) -> tuple[pd.DataFrame, dict]:
     """Select curated known-pathogen names first, then deterministic rank-stratified taxa."""
     if per_group < 1:
         raise ValueError("per_group must be positive.")
@@ -46,7 +48,8 @@ def select_pilot_species(species: pd.DataFrame, aliases: pd.DataFrame, *, per_gr
             alias_index.setdefault((str(row.organism_group), str(row.name).casefold()), set()).add(str(row.organism_id))
     selected_rows = []
     unmatched: dict[str, list[str]] = {}
-    for group in ("bacteria", "fungi", "viruses"):
+    groups = organism_groups or ["bacteria", "fungi", "viruses"]
+    for group in groups:
         frame = species.loc[species["organism_group"].astype(str).eq(group)].copy()
         frame = frame.loc[~frame["mapping_status"].astype(str).eq("ambiguous_accepted_name")]
         by_name = {str(row.accepted_name).casefold(): row for row in frame.itertuples(index=False)}
@@ -102,8 +105,8 @@ def select_pilot_species(species: pd.DataFrame, aliases: pd.DataFrame, *, per_gr
                                   "accepted_name": str(row.accepted_name), "taxonomy_path": str(row.taxonomy_path),
                                   "requested_name": item["requested_name"], "selection_reason": item["selection_reason"]})
     selection = pd.DataFrame(selected_rows)
-    if selection.empty or set(selection["organism_group"]) != {"bacteria", "fungi", "viruses"}:
-        raise ValueError("Could not select a pilot sample across all three organism groups.")
+    if selection.empty or not set(groups).issubset(set(selection["organism_group"])):
+        raise ValueError(f"Could not select the requested pilot groups: {groups}.")
     return species.loc[species["organism_id"].astype(str).isin(selection["organism_id"])].copy(), {
         "selection_version": "phase2-pilot-v1", "seed": seed, "requested_per_group": per_group,
         "selected_per_group": selection.groupby("organism_group").size().to_dict(),
@@ -121,7 +124,8 @@ def run_phase2_pilot(config_path: str = "configs/default.yaml", *, per_group: in
     taxonomy = Path(config["paths"]["taxonomy_release"])
     species = pd.read_parquet(taxonomy / "species.parquet")
     aliases = pd.read_parquet(taxonomy / "aliases.parquet")
-    pilot_species, manifest = select_pilot_species(species, aliases, per_group=per_group, seed=seed)
+    groups = selected_organism_groups(config)
+    pilot_species, manifest = select_pilot_species(species, aliases, per_group=per_group, seed=seed, organism_groups=groups)
     pilot_ids = set(pilot_species["organism_id"].astype(str))
     pilot_aliases = aliases.loc[aliases["organism_id"].astype("string").isin(pilot_ids)].copy()
     if not pilot_id.replace("_", "").replace("-", "").isalnum():
@@ -136,7 +140,8 @@ def run_phase2_pilot(config_path: str = "configs/default.yaml", *, per_group: in
         pilot_species, pilot_aliases, email=email, api_key=api_key,
         cache_dir=root / "cache", release_dir=root / "release", max_workers=max_workers,
         request_delay_seconds=request_delay_seconds, max_calls=None,
-        max_fetch_batches=max_fetch_batches, retmax=retmax, batch_size=batch_size, log=log,
+        max_fetch_batches=max_fetch_batches, retmax=retmax, batch_size=batch_size,
+        progress_every=int(config.get("logging", {}).get("progress_every", 100)), log=log,
     )
     metadata_path = root / "release" / "acquisition_metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -145,7 +150,7 @@ def run_phase2_pilot(config_path: str = "configs/default.yaml", *, per_group: in
         matches = matches.copy()
         matches["abstract_available"] = matches["pmid"].astype(str).isin(abstract_pmids)
     group_summaries = []
-    for group in ("bacteria", "fungi", "viruses"):
+    for group in groups:
         selected_group = pilot_species.loc[pilot_species["organism_group"].astype(str).eq(group)]
         group_matches = matches.loc[matches["organism_group"].astype(str).eq(group)] if not matches.empty else pd.DataFrame()
         matched_ids = set(group_matches["organism_id"].astype(str)) if not group_matches.empty else set()

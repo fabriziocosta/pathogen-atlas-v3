@@ -24,6 +24,20 @@ EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 _session_local = threading.local()
 
 
+def resolve_ncbi_email(email: str | None = None) -> str:
+    """Use NCBI_EMAIL first, then the configured local Git author contact."""
+    value = (email or os.environ.get("NCBI_EMAIL", "")).strip()
+    if value:
+        return value
+    if shutil.which("git"):
+        try:
+            result = subprocess.run(["git", "config", "user.email"], capture_output=True, text=True, check=False, timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+        value = result.stdout.strip() if result.returncode == 0 else ""
+    return value if "@" in value else ""
+
+
 def _ncbi_key_from_keychain() -> str | None:
     """Read the optional NCBI key from the AMR-compatible macOS Keychain item."""
     if sys.platform != "darwin" or shutil.which("security") is None:
@@ -188,16 +202,17 @@ def acquire_pubmed(
     max_fetch_batches: int | None = None,
     retmax: int = 10000,
     batch_size: int = 200,
+    progress_every: int = 25,
     requester=None,
     log: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Search each organism, fetch each PMID once, and checkpoint raw JSONL caches."""
-    email = (email or os.environ.get("NCBI_EMAIL", "")).strip()
+    email = resolve_ncbi_email(email)
     api_key = (api_key or os.environ.get("NCBI_API_KEY", "") or os.environ.get("EUTILS_API_KEY", "")).strip() or _ncbi_key_from_keychain()
     if not email:
         raise ValueError("Set NCBI_EMAIL before live PubMed requests.")
-    if max_workers < 1 or batch_size < 1:
-        raise ValueError("max_workers and batch_size must be positive.")
+    if max_workers < 1 or batch_size < 1 or progress_every < 1:
+        raise ValueError("max_workers, batch_size, and progress_every must be positive.")
     request_delay_seconds = (0.11 if api_key else 0.34) if request_delay_seconds is None else float(request_delay_seconds)
     retmax = min(max(1, int(retmax)), 10000)
     cache, release = Path(cache_dir), Path(release_dir)
@@ -263,7 +278,7 @@ def acquire_pubmed(
     search_start = time.monotonic()
     for index, item in enumerate(_bounded_results(tasks, search, max_workers), 1):
         query_cache[item["query_id"]] = item; append_jsonl(query_path, item)
-        if log and (index % 25 == 0 or index == len(tasks)):
+        if log and (index % progress_every == 0 or index == len(tasks)):
             rate = index / max(0.01, time.monotonic() - search_start)
             print(f"PubMed search: {index:,}/{len(tasks):,}; ETA {(len(tasks)-index)/rate/60:.1f} min.")
     associations = []
@@ -285,7 +300,7 @@ def acquire_pubmed(
     for index, batch_rows in enumerate(_bounded_results(batches, fetch, max_workers), 1):
         for item in batch_rows:
             article_cache[str(item["pmid"])] = item; append_jsonl(article_path, item)
-        if log and (index % 10 == 0 or index == len(batches)):
+        if log and (index % max(1, progress_every // 10) == 0 or index == len(batches)):
             rate = index / max(0.01, time.monotonic() - fetch_start)
             print(f"PubMed fetch: {index:,}/{len(batches):,} batches; ETA {(len(batches)-index)/rate/60:.1f} min.")
     abstracts_frame = pd.DataFrame(article_cache.values())

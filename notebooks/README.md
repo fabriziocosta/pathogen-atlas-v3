@@ -1,3 +1,7 @@
 # V3 notebooks
 
-Run `00_workflow.ipynb` for orientation, then `01_taxonomy.ipynb`. Use `02a_pubmed_pilot.ipynb` for the bounded cross-domain retrieval check; it writes to a separate pilot cache and release. Run `02_pubmed.ipynb` for full retrieval only after reviewing the pilot. Continue with `03_decisions.ipynb` through `05_embedding.ipynb` in order. Each notebook names the implementation module and exposes the parameters that affect calls or outputs. Do not put reusable pipeline logic in notebook cells.
+Run `00_workflow.ipynb` for settings and orientation, then Phases 1–5 in order. Edit `run.organism_groups` in `configs/default.yaml` to select bacteria, fungi, viruses, or any combination for Phases 2–5. Phase 1 builds the full master taxonomy.
+
+The notebooks follow the inspectable V2 pattern: show configured inputs and output paths, display a preflight before network work, expose limits and logging intervals, call named Python phase functions, and inspect produced tables. Reusable logic remains in `pathogen_atlas_v3/`.
+
+Phase 2 query and fetch logs include ETA and resume from per-domain caches. Phase 3 preflight estimates the selected calls; Jev logs show concurrency, checkpoint progress, failures, ETA, and remaining OpenRouter balance. Data and generated outputs remain local and outside Git.

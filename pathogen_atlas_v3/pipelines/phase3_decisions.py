@@ -9,6 +9,7 @@ import pandas as pd
 import yaml
 
 from pathogen_atlas_v3.common.io import load_yaml
+from pathogen_atlas_v3.common.config import selected_organism_groups
 from pathogen_atlas_v3.decisions.features import load_feature_catalog, questions_for_domain
 from pathogen_atlas_v3.decisions.jev import OpenRouterJevClient
 from pathogen_atlas_v3.decisions.runner import run_domain_features, run_pathogen_gate
@@ -20,6 +21,8 @@ def phase3_preflight(config_path: str = "configs/default.yaml") -> dict:
     p = Path(config["paths"]["pubmed_release"])
     matches = pd.read_parquet(p / "species_abstracts.parquet")
     abstracts = pd.read_parquet(p / "abstracts.parquet", columns=["pmid", "abstract"])
+    groups = selected_organism_groups(config)
+    matches = matches.loc[matches["organism_group"].astype(str).isin(groups)]
     available = set(abstracts.loc[abstracts["abstract"].fillna("").astype(str).str.strip().ne(""), "pmid"].astype(str))
     selected = matches.loc[matches["selected_for_fetch"].fillna(False).astype(bool)]
     selected_pairs = selected.loc[selected["pmid"].astype(str).isin(available), ["organism_id", "pmid"]].drop_duplicates()
@@ -31,10 +34,11 @@ def phase3_preflight(config_path: str = "configs/default.yaml") -> dict:
     passing = None
     if ledger_path.exists():
         ledger = pd.read_parquet(ledger_path)
-        gate = ledger.loc[ledger["decision_kind"].astype(str).eq("pathogen_evidence") & ledger["run_id"].astype(str).eq("v3-gate-v1") & ledger["status"].astype(str).eq("completed")]
+        selected_organisms = set(matches["organism_id"].astype(str))
+        gate = ledger.loc[ledger["decision_kind"].astype(str).eq("pathogen_evidence") & ledger["run_id"].astype(str).eq("v3-gate-v1") & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
         cached_gate = gate[["organism_id", "pmid"]].drop_duplicates().shape[0]
         passing = gate.loc[pd.to_numeric(gate["p_yes"], errors="coerce").ge(float(decisions.get("pathogen_threshold", .75))), ["organism_id", "pmid"]].drop_duplicates()
-        feat = ledger.loc[ledger["decision_kind"].astype(str).eq("feature") & ledger["run_id"].astype(str).eq("v3-features-v1") & ledger["status"].astype(str).eq("completed")]
+        feat = ledger.loc[ledger["decision_kind"].astype(str).eq("feature") & ledger["run_id"].astype(str).eq("v3-features-v1") & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
         cached_feature = feat[["organism_id", "pmid"]].drop_duplicates().shape[0]
     feature_calls = int(len(passing)) if passing is not None else int(gate_pairs * float(decisions["cost_estimate"].get("expected_pathogen_fraction", .5)))
     pending_gate = max(0, gate_pairs - cached_gate)
@@ -53,6 +57,12 @@ def run_phase3(config_path: str = "configs/default.yaml", *, max_calls: int | No
     settings, paths = config["decisions"], config["paths"]
     abstracts = pd.read_parquet(Path(paths["pubmed_release"]) / "abstracts.parquet")
     matches = pd.read_parquet(Path(paths["pubmed_release"]) / "species_abstracts.parquet")
+    groups = selected_organism_groups(config)
+    matches = matches.loc[matches["organism_group"].astype(str).isin(groups)].copy()
+    selected_pmids = set(matches["pmid"].astype(str))
+    abstracts = abstracts.loc[abstracts["pmid"].astype(str).isin(selected_pmids)].copy()
+    if log:
+        print(f"Phase 3 selected organism groups: {', '.join(groups)}; {len(matches):,} selected species–PMID rows; {len(abstracts):,} matching abstracts.")
     prompt_path = Path("configs/prompts/pathogen_evidence.yaml")
     prompt = load_yaml(prompt_path)
     catalog, profiles = load_feature_catalog("configs/features.yaml", "configs/feature_profiles.yaml", allow_provisional=True)
@@ -60,7 +70,8 @@ def run_phase3(config_path: str = "configs/default.yaml", *, max_calls: int | No
     if client is None:
         client = OpenRouterJevClient(model=settings.get("model", "typesafe/jev-1.14"), endpoint=settings.get("endpoint", "https://openrouter.ai/api/alpha/decisions"), timeout=float(settings.get("timeout_seconds", 90)), retries=int(settings.get("retries", 3)), backoff_seconds=float(settings.get("backoff_seconds", 1)))
     limit = max_calls if max_calls is not None else settings.get("max_calls")
-    common = {"run_id": "v3-gate-v1", "question_version": settings["pathogen_question_version"], "profile_version": "pathogen-gate-v3.1", "ledger_path": paths["decision_ledger"], "raw_response_path": paths["raw_responses"], "max_calls": limit, "max_workers": int(settings.get("max_workers", 32)), "client": client, "log": log}
+    progress_every = int(config.get("logging", {}).get("progress_every", 100))
+    common = {"run_id": "v3-gate-v1", "question_version": settings["pathogen_question_version"], "profile_version": "pathogen-gate-v3.1", "ledger_path": paths["decision_ledger"], "raw_response_path": paths["raw_responses"], "max_calls": limit, "max_workers": int(settings.get("max_workers", 32)), "checkpoint_every": progress_every, "client": client, "log": log}
     gate = run_pathogen_gate(abstracts, matches, prompt, **common)
     feature_common = {**common, "run_id": "v3-features-v1", "question_version": settings["feature_question_set_version"], "profile_version": catalog["version"], "max_calls": limit}
     features = run_domain_features(abstracts, matches, gate, threshold=float(settings.get("pathogen_threshold", .75)), questions_by_domain=question_maps, gate_run_id="v3-gate-v1", **feature_common)
