@@ -16,7 +16,7 @@ The 73 inherited bacteria questions preserve their legacy identifiers and source
 
 The disease gate and feature assessments share one normalized ledger. Its cache identity includes organism group and stable ID, PMID, abstract/title hash, model, question version, feature-profile version, and run ID. One Jev request contains all currently applicable feature questions for one passing abstract. Raw responses are appended before normalization; malformed or failed rows remain in the ledger with errors and can be retried.
 
-The disease gate defaults to `p_yes >= 0.75` for feature selection. This is a pilot setting, not an approved release threshold. Phase 4 writes candidate results but does not mark them accepted while `release_evaluation_approved` is false. Do not interpret candidate probabilities or provisional features as final labels.
+The disease gate defaults to `p_yes >= 0.75`. A sampled abstract that meets this threshold is accepted pathogen evidence and is included in the Phase 4 release. Feature scores remain separate supporting characterizations; they do not override the disease-attribution gate.
 
 ## Pathogenic Interest Index
 

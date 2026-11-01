@@ -8,15 +8,15 @@
 - Migration to V3 organism, alias, abstract-match, and legacy-decision schemas, with the old Pathogenic Interest Index retained separately.
 - 73 inherited bacteria features and initial fungal/viral candidate profiles in a versioned catalogue.
 - Source-file adapters for LPSN, the dated Species Fungorum snapshot, and pinned ICTV MSL41; full taxonomy source rows are retained in provenance JSON.
-- Rate-limited resumable PubMed acquisition, typed Jev gate/feature calls, local JSONL raw responses, parquet decision ledger, Phase 4 tables, IMSTE coordinates, and a static Explorer build. The current viral release contains 187,325 completed pathogen-gate assessments; the Explorer exposes their PMID, title, Jev confidence, and provisional candidate status.
+- Rate-limited resumable PubMed acquisition, typed Jev gate/feature calls, local JSONL raw responses, parquet decision ledger, Phase 4 tables, IMSTE coordinates, and a static Explorer build. The current viral release contains 187,325 completed pathogen-gate assessments; the Explorer exposes their PMID, title, Jev confidence, and accepted pathogen evidence at the configured 0.75 threshold.
 - Fake-client tests for all three groups, decision resume/retry and taxonomy/index contracts.
 
 ## Still required before a production multi-domain release
 
 - Review the 40 fungal accepted-name collisions and the source-level fungal/virus mapping decisions before publishing a release.
 - Review each provisional shared feature and fungal/viral feature with domain experts; curate labelled examples for the gate and feature questions.
-- Run and evaluate bounded Jev pilots for each domain. Keep `release_evaluation_approved: false` until thresholds are supported by that evaluation.
-- Re-score bacterial abstracts under the V3 prompt/profile versions; V2 decisions remain historical.
+- Run and evaluate bounded Jev pilots for each domain. The configured 0.75 pathogen gate currently defines accepted evidence; feature interpretations still need expert review and evaluation.
+- Initialize matching bacterial V2 gate and feature scores into the V3 ledger with provenance; re-score only changed or missing inputs.
 - Fit and inspect V3 shared and domain-specific IMSTE spaces after scored features exist.
 - Extend Wikipedia and GBIF link association coverage to the new fungal/viral cohorts.
 

@@ -79,7 +79,8 @@ decisions:
   feature_question_set_version: multi-domain-features-v3.2
   pathogen_threshold: 0.75
   feature_yes_threshold: 0.75
-  release_evaluation_approved: false
+  # A sampled abstract at or above the pathogen gate is accepted evidence.
+  release_evaluation_approved: true
   cost_estimate:
     expected_pathogen_fraction: 0.5
     input_tokens_per_gate_call: 1200

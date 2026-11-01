@@ -43,6 +43,31 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     species = pd.read_parquet(species_path)
     features = pd.read_parquet(feature_path) if feature_path.exists() else pd.DataFrame()
     coords = pd.read_parquet(coordinate_path) if coordinate_path.exists() else pd.DataFrame()
+    v2_release_root = ROOT / "data/migration/version2_snapshot/04_tables/release"
+    v2_species_path = v2_release_root / "species_summary.parquet"
+    v2_index_path = v2_release_root / "pathogenic_index.parquet"
+    v2_evidence_path = v2_release_root / "evidence_records.parquet"
+    v2_feature_matrix_path = v2_release_root / "species_feature_matrix.parquet"
+    v2_answers_path = v2_release_root / "domain_expert_answers.parquet"
+    v2_species = pd.read_parquet(v2_species_path) if v2_species_path.exists() else pd.DataFrame()
+    v2_index = pd.read_parquet(v2_index_path) if v2_index_path.exists() else pd.DataFrame()
+    v2_evidence = pd.read_parquet(v2_evidence_path) if v2_evidence_path.exists() else pd.DataFrame()
+    v2_feature_matrix = pd.read_parquet(v2_feature_matrix_path) if v2_feature_matrix_path.exists() else pd.DataFrame()
+    v2_answers = pd.read_parquet(v2_answers_path) if v2_answers_path.exists() else pd.DataFrame()
+    if not v2_species.empty and not v2_index.empty:
+        v2_species = v2_species.merge(v2_index[["canonical_species", "pathogenic_index"]], on="canonical_species", how="left")
+    v2_summary_by_name = {
+        str(row.canonical_species).casefold(): row._asdict()
+        for row in v2_species.itertuples(index=False)
+    } if not v2_species.empty else {}
+    v2_features_by_name = {}
+    if not v2_feature_matrix.empty:
+        feature_columns = [column for column in v2_feature_matrix.columns if column.startswith("feature_")]
+        for row in v2_feature_matrix.itertuples(index=False):
+            v2_features_by_name[str(row.canonical_species).casefold()] = {
+                column.removeprefix("feature_"): (None if pd.isna(getattr(row, column)) else float(getattr(row, column)))
+                for column in feature_columns
+            }
     if not coords.empty:
         # The shared coordinates provide one cross-domain placement. A domain-specific
         # map can be chosen by changing embedding_scope in the client UI later.
@@ -87,14 +112,17 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
             "dimension_id": row["dimension_id"], "dimension": row["dimension_label"],
             "category_id": row["category_id"], "category": row["category_label"],
         }
-    # Keep the full, completed Jev gate assessments available for inspection.
-    # V3 labels are provisional until the held-out evaluation is approved, so
-    # the public Explorer must not hide model confidence behind the accepted
-    # evidence table (which is intentionally empty before that approval).
+    # Keep all completed gate assessments available for inspection, including
+    # confidence values for records that did not pass the acceptance threshold.
     evidence_path = release / "pathogen_decisions.parquet"
     evidence = pd.read_parquet(evidence_path) if evidence_path.exists() else pd.DataFrame()
+    completed_gate_count = 0
     if not evidence.empty:
         evidence = evidence.loc[evidence["status"].astype(str).eq("completed")].copy()
+        completed_gate_count = int(evidence[["organism_id", "pmid"]].drop_duplicates().shape[0])
+        # Match the bacterial V2 Explorer's pathogen-only profiles: publish
+        # only assessed virus–PMID records accepted by the configured gate.
+        evidence = evidence.loc[evidence["accepted_pathogen_evidence"].fillna(False).astype(bool)].copy()
     feature_decisions_path = release / "feature_decisions.parquet"
     feature_decisions = pd.read_parquet(feature_decisions_path) if feature_decisions_path.exists() else pd.DataFrame()
     abstracts_path = ROOT / paths["pubmed_release"] / "abstracts.parquet"
@@ -115,6 +143,10 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         evidence["feature_confidences"] = [confidences.get((str(r.organism_id), str(r.pmid)), {}) for r in evidence.itertuples(index=False)]
     evidence_root = ROOT / "sites/pathogen-atlas-explorer/dist/evidence"
     evidence_root.mkdir(parents=True, exist_ok=True)
+    # The virus cohort can shrink when the accepted gate threshold changes.
+    # Remove stale shards so the release archive contains only linked evidence.
+    for stale_shard in evidence_root.glob("*.json"):
+        stale_shard.unlink()
     evidence_files = {}
     if not evidence.empty:
         for organism_id, group in evidence.groupby("organism_id"):
@@ -138,32 +170,42 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         item["feature_values"] = feature_map.get(oid, {})
         item["evidence_file"] = evidence_files.get(oid)
         name_key = str(item.get("accepted_name", "")).casefold()
+        if item.get("organism_group") == "bacteria" and name_key in v2_summary_by_name:
+            legacy = v2_summary_by_name[name_key]
+            item["n_pathogen_pmids"] = int(legacy.get("n_causation", 0) or 0)
+            item["n_abstracts_fetched"] = int(legacy.get("n_sampled", 0) or 0)
+            item["n_pubmed_search_records"] = int(legacy.get("n_articles", 0) or 0)
+            item["pathogenic_interest_index"] = None if pd.isna(legacy.get("pathogenic_index")) else float(legacy.get("pathogenic_index", 0))
+            item["index_version"] = "pathogenic-interest-index-v2-migrated"
+            item["feature_values"] = v2_features_by_name.get(name_key, {})
         legacy_name_fallback = name_key if str(item.get("organism_group", "")).casefold() == "bacteria" else None
         item["wikipedia_url"] = wikipedia_by_id.get(oid) or (wikipedia_by_name.get(legacy_name_fallback) if legacy_name_fallback else None)
         item["gbif_url"] = gbif_by_id.get(oid) or (gbif_by_name.get(legacy_name_fallback) if legacy_name_fallback else None)
         item["taxonomy"] = {part.split("=", 1)[0]: part.split("=", 1)[1] for part in str(item.get("taxonomy_path") or "").split(";") if "=" in part}
         species_rows.append(item)
     accepted_count = int(species.get("n_pathogen_pmids", pd.Series(dtype=int)).fillna(0).sum())
-    candidate_counts: dict[str, int] = {}
+    accepted_counts: dict[str, int] = {}
     assessment_counts: dict[str, int] = {}
-    candidate_record_count = 0
     if not evidence.empty:
         assessment_counts = evidence.groupby("organism_id")["pmid"].nunique().astype(int).to_dict()
-        candidates = evidence.loc[evidence["candidate_pathogen_evidence"].fillna(False).astype(bool)]
-        candidate_counts = candidates.groupby("organism_id")["pmid"].nunique().astype(int).to_dict()
-        candidate_record_count = int(candidates[["organism_id", "pmid"]].drop_duplicates().shape[0])
+        accepted_counts = assessment_counts
     for item in species_rows:
         oid = str(item["organism_id"])
         item["n_jev_assessments"] = int(assessment_counts.get(oid, 0))
-        item["n_jev_candidate_pmids"] = int(candidate_counts.get(oid, 0))
+        item["n_jev_accepted_pmids"] = int(accepted_counts.get(oid, 0))
+    # V3 keeps the full taxonomy for bacteria and fungi, while the virus
+    # Explorer cohort mirrors V2's pathogen-only bacterial cohort.
+    species_rows = [item for item in species_rows
+                    if item["organism_group"] != "viruses" or int(item.get("n_pathogen_pmids", 0) or 0) > 0]
     feature_status_counts = feature_decisions["status"].astype(str).value_counts().to_dict() if not feature_decisions.empty else {}
     stats = {"species_with_profiles": sum(any(v is not None for v in item["feature_values"].values()) for item in species_rows),
              "accepted_species_pmid_records": accepted_count,
-             "jev_completed_assessments": int(evidence[["organism_id", "pmid"]].drop_duplicates().shape[0]) if not evidence.empty else 0,
-             "jev_candidate_species_pmid_records": candidate_record_count,
+             "jev_completed_assessments": completed_gate_count,
+             "jev_accepted_species_pmid_records": int(evidence[["organism_id", "pmid"]].drop_duplicates().shape[0]) if not evidence.empty else 0,
+             "virus_pathogen_species": sum(item["organism_group"] == "viruses" for item in species_rows),
              "feature_assessments_completed": int(feature_status_counts.get("completed", 0)),
              "feature_assessments_failed": int(feature_status_counts.get("failed", 0)),
-             "pubmed_search_records": int(species.get("n_pubmed_search_records", pd.Series(dtype=int)).fillna(0).sum()),
+             "pubmed_search_records": sum(int(item.get("n_pubmed_search_records", 0) or 0) for item in species_rows),
              "feature_count": len(feature_definitions)}
     # Publish the same hierarchy used by the scoring config so the Explorer can
     # present feature summaries as dimension > category > feature.
