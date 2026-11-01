@@ -102,42 +102,41 @@ function render(){
  const selectedGroup=document.getElementById('group').value;
  updateFeatureOptions();
  if(!DATA.coordinates_ready||selectedGroup==='all'){document.getElementById('reset-map-view').disabled=true;document.getElementById('mapnote').textContent=DATA.coordinates_ready?'Select a group to view its feature space':'Human pathogen catalog';renderCatalog();return}
- const bacteriaParity=selectedGroup==='bacteria';
- document.getElementById('mapnote').textContent=bacteriaParity?'V2 bacterial pathogen feature space':'V3 virus pathogen feature space';
+ document.getElementById('reset-map-view').disabled=false;
+ document.getElementById('mapnote').textContent=`${selectedGroup[0].toUpperCase()+selectedGroup.slice(1)} IMSTE feature space`;
  document.getElementById('map').classList.remove('catalog-mode');
  const rows=visible();
  if(!rows.length){document.getElementById('map').innerHTML='<div class="empty">No fitted coordinates match the filters.</div>';return}
  const key=document.getElementById('color').value;
  const vals=rows.map(s=>key==='pathogenic_interest_index'?s.pathogenic_interest_index:key.startsWith('taxonomy:')?(s.taxonomy||{})[key.split(':')[1]]:(s.feature_values||{})[key]);
  const taxonomyColor=key.startsWith('taxonomy:');
- const sizeByIndex=document.getElementById('size-index').checked, black=document.getElementById('black-edge').checked;
+ const sizeByIndex=document.getElementById('size-index').checked,black=document.getElementById('black-edge').checked;
  const definition=DATA.features[key]?.definition||'';
  document.getElementById('color-description').innerHTML=definition?`<b>Color: ${DATA.features[key].label}: ${definition}</b><br><span class="small">Color intensity shows the share of scored abstracts answered yes. Zero values and unscored points use translucent gray.</span>`:'';
  const cmap=document.getElementById('cmap').value,reverse=document.getElementById('reverse').checked;
- const makeTrace=(source,sourceColors,{gray=false,categoryValues=null,opacity=null}={})=>{
-  const markerSizing=bacteriaParity?(sizeByIndex?{size:source.map(s=>Math.max(0,Number(s.pathogenic_interest_index)||0)),sizemode:'area',sizeref:1/(24*24),sizemin:4}:{size:8}):{size:source.map(s=>sizeByIndex?Math.max(7,Math.min(30,8+22*Math.sqrt(Number(s.pathogenic_interest_index||0)))):12)};
-  const marker={...markerSizing,color:gray?(bacteriaParity?'#aeb9c7':'rgba(105,120,135,0.30)'):sourceColors,opacity:opacity??(gray?(bacteriaParity?.16:.65):bacteriaParity?.84:.92),line:{color:black?(bacteriaParity?'#111827':'black'):'#ffffff',width:bacteriaParity?.45:.8}};
-  if(!gray&&!categoryValues){marker.colorscale=bacteriaParity?(v2ExtraColorScales[cmap]||cmap):cmap;marker.reversescale=reverse;marker.cmin=0;marker.cmax=1;marker.showscale=true;marker.colorbar=bacteriaParity?{x:1.07,thickness:13,len:.72,tickformat:taxonomyColor?'':'.0%'}:{title:key==='pathogenic_interest_index'?'Pathogenic Interest Index':(taxonomyColor?key.split(':')[1]:(DATA.features[key]||{}).label),tickvals:null,ticktext:null}}
-  if(categoryValues){marker.showscale=false}
-  return {type:bacteriaParity?'scattergl':'scatter',mode:'markers',x:source.map(s=>s.x),y:source.map(s=>s.y),customdata:source.map(s=>[s.organism_id,s.organism_group,s.n_pathogen_pmids,s.n_pubmed_search_records]),text:source.map(s=>s.accepted_name),hovertemplate:'<b>%{text}</b><br>%{customdata[1]}<br>Supporting PMIDs: %{customdata[2]}<br>PubMed search records: %{customdata[3]}<extra></extra>',marker,showlegend:false};
+ const makeTrace=(source,sourceColors,{gray=false,categoryValues=false}={})=>{
+  const markerSizing=sizeByIndex?{size:source.map(s=>Math.max(0,Number(s.pathogenic_interest_index)||0)),sizemode:'area',sizeref:1/(24*24),sizemin:4}:{size:8};
+  const marker={...markerSizing,color:gray?'#aeb9c7':sourceColors,opacity:gray?.16:.84,line:{color:black?'#111827':'#ffffff',width:.45}};
+  if(!gray&&!categoryValues){marker.colorscale=v2ExtraColorScales[cmap]||cmap;marker.reversescale=reverse;marker.cmin=0;marker.cmax=1;marker.showscale=true;marker.colorbar={x:1.07,thickness:13,len:.72,tickformat:taxonomyColor?'':'.0%'};}
+  return {type:'scattergl',mode:'markers',x:source.map(s=>s.x),y:source.map(s=>s.y),customdata:source.map(s=>[s.organism_id,s.organism_group,s.n_pathogen_pmids,s.n_pubmed_search_records]),text:source.map(s=>s.accepted_name),hovertemplate:'<b>%{text}</b><br>%{customdata[1]}<br>Supporting PMIDs: %{customdata[2]}<br>PubMed search records: %{customdata[3]}<extra></extra>',hoverlabel:{align:'left',namelength:0},marker,showlegend:false};
  };
- let traces;
- if(taxonomyColor&&bacteriaParity){
+ let traces=[];
+ if(taxonomyColor){
   const categories=[...new Set(vals.filter(v=>v!=null))].sort((a,b)=>String(a).localeCompare(String(b)));
-  traces=categories.map((category,i)=>{const subset=rows.filter((_,j)=>vals[j]===category);const trace=makeTrace(subset,null,{categoryValues:true});trace.name=category;trace.showlegend=categories.length<=12;trace.marker.color=v2Palette[i%v2Palette.length];trace.marker.opacity=.84;return trace});
+  for(const [i,category] of categories.entries()){
+   const subset=rows.filter((_,j)=>vals[j]===category),trace=makeTrace(subset,null,{categoryValues:true});
+   trace.name=category;trace.showlegend=categories.length<=12;trace.marker.color=v2Palette[i%v2Palette.length];traces.push(trace);
+  }
   const missing=rows.filter((_,i)=>vals[i]==null);if(missing.length)traces.push(makeTrace(missing,null,{gray:true}));
- } else if(taxonomyColor){
-  const categories=[...new Set(vals.filter(v=>v!=null))];const colors=vals.map(v=>v==null?null:categories.indexOf(v));
-  traces=[makeTrace(rows,colors)];const tr=traces[0];tr.marker.colorscale=cmap;tr.marker.cmin=0;tr.marker.cmax=1;tr.marker.colorbar={title:key==='pathogenic_interest_index'?'Pathogenic Interest Index':key.split(':')[1],tickvals:categories.map((_,i)=>i),ticktext:categories};
- } else {
+ }else{
   const coloredRows=[],coloredValues=[],zeroRows=[],missingRows=[];
-  rows.forEach((s,i)=>{if(vals[i]==null)missingRows.push(s);else if(Number(vals[i])===0)zeroRows.push(s);else{coloredRows.push(s);coloredValues.push(Number(vals[i]))}});
-  traces=[];if(coloredRows.length)traces.push(makeTrace(coloredRows,coloredValues));
+  rows.forEach((species,i)=>{if(vals[i]==null||!Number.isFinite(Number(vals[i])))missingRows.push(species);else if(Number(vals[i])===0)zeroRows.push(species);else{coloredRows.push(species);coloredValues.push(Number(vals[i]))}});
+  if(coloredRows.length)traces.push(makeTrace(coloredRows,coloredValues));
   if(zeroRows.length)traces.push(makeTrace(zeroRows,null,{gray:true}));
   if(missingRows.length)traces.push(makeTrace(missingRows,null,{gray:true}));
  }
- if(bacteriaParity&&selected&&rows.some(s=>s.organism_id===selected.organism_id)){traces.push({type:'scattergl',mode:'markers',x:[selected.x],y:[selected.y],customdata:[[selected.organism_id]],hoverinfo:'skip',showlegend:false,marker:{symbol:'circle-open',size:17,color:'#d84a36',line:{width:2.5}}})}
- const layout=bacteriaParity?{margin:{l:58,r:112,t:22,b:50},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif',color:'#29425f',size:11},xaxis:{title:'IMSTE 1',zeroline:false,gridcolor:'#edf1f6'},yaxis:{title:'IMSTE 2',zeroline:false,gridcolor:'#edf1f6',scaleanchor:'x',scaleratio:1},hovermode:'closest',uirevision:`pathogen-atlas-${selectedGroup}`,showlegend:taxonomyColor&&[...new Set(vals.filter(v=>v!=null))].length<=12,legend:{orientation:'h',y:-.15,x:0,font:{size:10}}}:{margin:{l:42,r:20,t:20,b:42},paper_bgcolor:'white',plot_bgcolor:'white',xaxis:{title:'Feature space 1',showgrid:true,gridcolor:'#e8eef2'},yaxis:{title:'Feature space 2',showgrid:true,gridcolor:'#e8eef2'},hoverlabel:{namelength:0}};
+ if(selected&&rows.some(s=>s.organism_id===selected.organism_id)){traces.push({type:'scattergl',mode:'markers',x:[selected.x],y:[selected.y],customdata:[[selected.organism_id]],hoverinfo:'skip',showlegend:false,marker:{symbol:'circle-open',size:17,color:'#d84a36',line:{width:2.5}}})}
+ const layout={margin:{l:58,r:taxonomyColor?20:112,t:22,b:50},paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{family:'Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif',color:'#29425f',size:11},xaxis:{title:'IMSTE 1',zeroline:false,gridcolor:'#edf1f6'},yaxis:{title:'IMSTE 2',zeroline:false,gridcolor:'#edf1f6',scaleanchor:'x',scaleratio:1},hovermode:'closest',uirevision:`pathogen-atlas-${selectedGroup}`,showlegend:taxonomyColor&&[...new Set(vals.filter(v=>v!=null))].length<=12,legend:{orientation:'h',y:-.15,x:0,font:{size:10}}};
  Plotly.react('map',traces,layout,{responsive:true,displaylogo:false});
  document.getElementById('map').on('plotly_click',ev=>{const oid=ev.points[0].customdata[0];const species=DATA.species.find(s=>s.organism_id===oid);if(species)showProfile(species)});
 }
