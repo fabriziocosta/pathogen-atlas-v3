@@ -129,7 +129,7 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         if categories:
             feature_hierarchy.append({"id": dimension_id, "label": dimension["label"], "categories": categories})
     payload = {"release": "Pathogen Atlas V3", "species": species_rows, "features": feature_definitions,
-               "feature_hierarchy": feature_hierarchy,
+               "feature_hierarchy": feature_hierarchy, "feature_profiles": profiles,
                "groups": config["project"]["domains"], "coordinates_ready": bool(not coords.empty), "stats": stats}
     dist = ROOT / "sites/pathogen-atlas-explorer/dist"; dist.mkdir(parents=True, exist_ok=True)
     json_path = dist / "explorer-data.json"

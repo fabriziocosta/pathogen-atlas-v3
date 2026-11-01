@@ -2,7 +2,7 @@
 
 The Explorer is published at <https://fabriziocosta.github.io/pathogen-atlas-v3/>.
 
-It is a static site. The HTML application is tracked in this repository; its generated data and evidence shards are distributed as the `explorer-site-data` GitHub Release asset and are assembled into a GitHub Pages artifact by `.github/workflows/deploy-explorer.yml`. This keeps generated data out of the source Git history.
+It is a static site. The HTML application is tracked in this repository; its generated data and evidence shards are distributed as the `explorer-site-data` GitHub Release asset and are assembled into a GitHub Pages artifact by `.github/workflows/deploy-explorer.yml`. At deploy time, the workflow exports the current three-level feature catalogue from `configs/features.yaml` and `configs/feature_profiles.yaml`, so the interface stays aligned with the versioned YAML without checking generated data into Git.
 
 To update the public data snapshot:
 

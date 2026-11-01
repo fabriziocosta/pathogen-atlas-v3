@@ -72,10 +72,11 @@ def run_phase3(config_path: str = "configs/default.yaml", *, max_calls: int | No
     limit = max_calls if max_calls is not None else settings.get("max_calls")
     logging_settings = config.get("logging", {})
     log_every = int(logging_settings.get("progress_every", 1000))
+    feature_log_every = int(logging_settings.get("feature_progress_every", 100))
     checkpoint_every = int(logging_settings.get("checkpoint_every", 100))
     common = {"run_id": "v3-gate-v1", "question_version": settings["pathogen_question_version"], "profile_version": "pathogen-gate-v3.1", "ledger_path": paths["decision_ledger"], "raw_response_path": paths["raw_responses"], "max_calls": limit, "max_workers": int(settings.get("max_workers", 48)), "checkpoint_every": checkpoint_every, "log_every": log_every, "balance_poll_interval_seconds": float(logging_settings.get("balance_poll_interval_seconds", 60)), "client": client, "log": log}
     gate = run_pathogen_gate(abstracts, matches, prompt, **common)
-    feature_common = {**common, "run_id": "v3-features-v1", "question_version": settings["feature_question_set_version"], "profile_version": catalog["version"], "max_calls": limit}
+    feature_common = {**common, "run_id": "v3-features-v1", "question_version": settings["feature_question_set_version"], "profile_version": catalog["version"], "max_calls": limit, "log_every": feature_log_every}
     features = run_domain_features(abstracts, matches, gate, threshold=float(settings.get("pathogen_threshold", .75)), questions_by_domain=question_maps, gate_run_id="v3-gate-v1", **feature_common)
     return {"gate": gate, "features": features}
 

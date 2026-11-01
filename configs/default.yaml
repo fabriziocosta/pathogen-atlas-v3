@@ -105,6 +105,7 @@ embedding:
   device: auto
 logging:
   progress_every: 5000
+  feature_progress_every: 100
   checkpoint_every: 100
   show_eta: true
   show_openrouter_balance: true
