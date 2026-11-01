@@ -126,6 +126,8 @@ function render(){
  const key=document.getElementById('color').value;
  const vals=rows.map(s=>key==='pathogenic_interest_index'?s.pathogenic_interest_index:key.startsWith('taxonomy:')?(s.taxonomy||{})[key.split(':')[1]]:(s.feature_values||{})[key]);
  const taxonomyColor=key.startsWith('taxonomy:');
+ const selectedFieldLabel=key==='pathogenic_interest_index'?'Pathogenic Interest Index':taxonomyColor?key.split(':')[1][0].toUpperCase()+key.split(':')[1].slice(1):(DATA.features[key]?.label||key);
+ const selectedFieldValue=species=>{const value=key==='pathogenic_interest_index'?species.pathogenic_interest_index:taxonomyColor?(species.taxonomy||{})[key.split(':')[1]]:(species.feature_values||{})[key];if(value==null||value==='')return 'Not available';if(taxonomyColor)return String(value);if(!Number.isFinite(Number(value)))return 'Not available';return key==='pathogenic_interest_index'?Number(value).toFixed(3):`${Math.round(Number(value)*100)}%`};
  const sizeByIndex=document.getElementById('size-index').checked,black=document.getElementById('black-edge').checked;
  const definition=DATA.features[key]?.definition||'';
  const colorbarLabel=DATA.features[key]?.label||(key==='pathogenic_interest_index'?'Pathogenic Interest Index':key);
@@ -136,7 +138,7 @@ function render(){
   const markerSizing=sizeByIndex?{size:source.map(s=>Math.max(0,Number(s.pathogenic_interest_index)||0)),sizemode:'area',sizeref:1/(24*24),sizemin:4}:{size:8};
   const marker={...markerSizing,color:gray?'#aeb9c7':sourceColors,opacity:gray?.16:.84,line:{color:black?'#111827':'#ffffff',width:.45}};
   if(!gray&&!categoryValues){marker.colorscale=v2ExtraColorScales[cmap]||cmap;marker.reversescale=reverse;marker.cmin=0;marker.cmax=1;marker.showscale=true;marker.colorbar={x:1.07,thickness:13,len:.72,tickformat:taxonomyColor?'':'.0%'};}
-  return {type:'scattergl',mode:'markers',x:source.map(s=>s.x),y:source.map(s=>s.y),customdata:source.map(s=>[s.organism_id,s.organism_group,s.n_pathogen_pmids,s.n_pubmed_search_records]),text:source.map(s=>s.accepted_name),hovertemplate:'<b>%{text}</b><br>%{customdata[1]}<br>Supporting PMIDs: %{customdata[2]}<br>PubMed search records: %{customdata[3]}<extra></extra>',hoverlabel:{align:'left',namelength:0},marker,showlegend:false};
+  return {type:'scattergl',mode:'markers',x:source.map(s=>s.x),y:source.map(s=>s.y),customdata:source.map(s=>[s.organism_id,s.organism_group,s.n_pathogen_pmids,s.n_pubmed_search_records,selectedFieldLabel,selectedFieldValue(s)]),text:source.map(s=>s.accepted_name),hovertemplate:'<b>%{text}</b><br>%{customdata[1]}<br>Supporting PMIDs: %{customdata[2]}<br>PubMed search records: %{customdata[3]}<br>%{customdata[4]}: %{customdata[5]}<extra></extra>',hoverlabel:{align:'left',namelength:0},marker,showlegend:false};
  };
  let traces=[];
  if(taxonomyColor){
