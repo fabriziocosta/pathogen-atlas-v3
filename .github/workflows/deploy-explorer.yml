@@ -42,8 +42,11 @@ jobs:
             --dir /tmp/explorer-data
           tar -xzf /tmp/explorer-data/explorer-site-data.tar.gz -C _site
 
-      - name: Add Explorer application
-        run: cp sites/pathogen-atlas-explorer/dist/index.html _site/index.html
+      - name: Add Explorer application and brand assets
+        run: |
+          cp sites/pathogen-atlas-explorer/dist/index.html _site/index.html
+          mkdir -p _site/assets
+          cp sites/pathogen-atlas-explorer/dist/assets/pathogen-atlas-logo.png _site/assets/pathogen-atlas-logo.png
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
