@@ -30,7 +30,7 @@ def phase2_preflight(config_path: str = "configs/default.yaml") -> dict:
         from pathogen_atlas_v3.abstracts.pubmed import _ncbi_key_from_keychain
         import os
         has_key = bool(os.environ.get("NCBI_API_KEY") or os.environ.get("EUTILS_API_KEY") or _ncbi_key_from_keychain())
-        delay = 0.11 if has_key else 0.34
+        delay = 0.20 if has_key else 0.34
     alias_map = aliases.groupby("organism_id")["name"].apply(lambda values: list(dict.fromkeys(map(str, values.dropna())))).to_dict() if not aliases.empty else {}
     per_group = []
     root = Path(config["paths"].get("pubmed_domain_root", Path(config["paths"]["pubmed_release"]).parent / "domains"))

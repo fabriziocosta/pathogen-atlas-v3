@@ -68,6 +68,11 @@ class RateLimiter:
         if sleep_for:
             time.sleep(sleep_for)
 
+    def cooldown(self, seconds: float) -> None:
+        """Pause all workers after the provider reports rate limiting."""
+        with self.lock:
+            self.next_time = max(self.next_time, time.monotonic() + max(0.0, float(seconds)))
+
 
 def build_name_query(names: list[str]) -> str:
     clean = sorted({normalized for name in names if (normalized := " ".join(str(name).split())) and len(normalized) >= 3 and not re.fullmatch(r"\d+(?:\.\d+)?", normalized)}, key=str.casefold)
@@ -103,7 +108,12 @@ def _request(url: str, params: dict[str, Any], *, email: str, api_key: str | Non
                     retry_after = float(response_headers.get("Retry-After"))
                 except (TypeError, ValueError):
                     pass
-                time.sleep(max(retry_after or 0, min(30, 2 ** attempt)))
+                if status == 429:
+                    # A 429 is shared rate pressure: pause every worker rather
+                    # than letting concurrent retries continue at full speed.
+                    limiter.cooldown(max(retry_after or 0, min(120, 10 * (2 ** attempt))))
+                else:
+                    time.sleep(max(retry_after or 0, min(30, 2 ** attempt)))
                 continue
             detail = f"HTTP {status}" if status is not None else "network failure"
             raise RuntimeError(f"NCBI E-utilities request failed after {attempt + 1} attempt(s): {detail}; URL and credentials redacted.") from None
@@ -213,7 +223,9 @@ def acquire_pubmed(
         raise ValueError("Set NCBI_EMAIL before live PubMed requests.")
     if max_workers < 1 or batch_size < 1 or progress_every < 1:
         raise ValueError("max_workers, batch_size, and progress_every must be positive.")
-    request_delay_seconds = (0.11 if api_key else 0.34) if request_delay_seconds is None else float(request_delay_seconds)
+    # Keep a margin under NCBI's keyed ceiling; simultaneous jobs may share a
+    # key or network address, so running exactly at the nominal limit is brittle.
+    request_delay_seconds = (0.20 if api_key else 0.34) if request_delay_seconds is None else float(request_delay_seconds)
     retmax = min(max(1, int(retmax)), 10000)
     cache, release = Path(cache_dir), Path(release_dir)
     cache.mkdir(parents=True, exist_ok=True); release.mkdir(parents=True, exist_ok=True)
