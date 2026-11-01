@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import sys
 import threading
 import time
 import xml.etree.ElementTree as ET
+from datetime import date, timedelta
 from urllib.parse import urlencode
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
@@ -134,19 +136,37 @@ def _request(url: str, params: dict[str, Any], *, email: str, api_key: str | Non
 
 
 def _bounded_results(tasks, worker, max_workers: int):
-    """Yield results while keeping only a small multiple of workers in flight."""
+    """Yield successes while keeping a small multiple of workers in flight.
+
+    If one worker fails, stop submitting new work but drain the remaining
+    in-flight successes before raising. Callers can checkpoint those results.
+    """
     iterator = iter(tasks)
+    failure = None
     with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="v3-pubmed") as pool:
         futures = set()
         for _ in range(max_workers * 2):
-            try: futures.add(pool.submit(worker, next(iterator)))
-            except StopIteration: break
+            try:
+                futures.add(pool.submit(worker, next(iterator)))
+            except StopIteration:
+                break
         while futures:
             done, futures = wait(futures, return_when=FIRST_COMPLETED)
             for future in done:
-                yield future.result()
-                try: futures.add(pool.submit(worker, next(iterator)))
-                except StopIteration: pass
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    if failure is None:
+                        failure = exc
+                    continue
+                yield result
+                if failure is None:
+                    try:
+                        futures.add(pool.submit(worker, next(iterator)))
+                    except StopIteration:
+                        pass
+    if failure is not None:
+        raise failure
 
 
 def _fetch_batches(match_frame: pd.DataFrame, article_cache: dict[str, dict[str, Any]], *, batch_size: int, max_batches: int | None) -> tuple[list[str], list[list[str]]]:
@@ -211,6 +231,144 @@ def parse_article_xml(payload: str) -> list[dict[str, Any]]:
     return rows
 
 
+def _expand_query_overflow(
+    query_rows: list[dict[str, Any]],
+    *,
+    query_cache_path: Path,
+    segment_cache_path: Path,
+    retmax: int,
+    email: str,
+    api_key: str | None,
+    limiter: RateLimiter,
+    progress_every: int,
+    requester=None,
+    log: bool = True,
+) -> list[dict[str, Any]]:
+    """Expand over-cap PubMed searches into resumable date/UID segments.
+
+    NCBI limits ESearch's PubMed ID list to 10,000 records. Partitioning by
+    Entrez date avoids result truncation; exceptionally dense single days are
+    subdivided by PubMed UID ranges.
+    """
+    if not query_rows:
+        return query_rows
+    segment_cache: dict[str, dict[str, Any]] = {}
+    if segment_cache_path.exists():
+        for line in segment_cache_path.read_text(encoding="utf-8").splitlines():
+            try:
+                item = json.loads(line)
+                segment_cache[str(item["segment_id"])] = item
+            except (ValueError, KeyError):
+                continue
+    segment_cache_path.parent.mkdir(parents=True, exist_ok=True)
+    started_all = time.monotonic()
+    segment_requests_all = 0
+    start_date = date(1800, 1, 1)
+    end_date = date.today()
+    max_uid = 1_000_000_000
+
+    for query_index, item in enumerate(query_rows, 1):
+        original_pmids = {str(pmid) for pmid in item.get("pmids", [])}
+        base_query = str(item["query"])
+        query_id = str(item["query_id"])
+        stack: list[tuple[date, date, int | None, int | None]] = [(start_date, end_date, None, None)]
+        expanded_pmids: set[str] = set()
+        expanded_count = 0
+        segment_count = 0
+        while stack:
+            mindate, maxdate, uid_low, uid_high = stack.pop()
+            segment_key_value = {
+                "query_id": query_id,
+                "mindate": mindate.isoformat(),
+                "maxdate": maxdate.isoformat(),
+                "uid_low": uid_low,
+                "uid_high": uid_high,
+                "retmax": retmax,
+            }
+            segment_id = hashlib.sha256(json.dumps(segment_key_value, sort_keys=True).encode()).hexdigest()
+            cached = segment_cache.get(segment_id)
+            if cached is None:
+                term = base_query
+                if uid_low is not None and uid_high is not None:
+                    term = f"({base_query}) AND {uid_low}:{uid_high}[UID]"
+                response = _request(
+                    f"{EUTILS}/esearch.fcgi",
+                    {
+                        "db": "pubmed", "term": term, "retmax": retmax, "retmode": "json",
+                        "mindate": mindate.strftime("%Y/%m/%d"),
+                        "maxdate": maxdate.strftime("%Y/%m/%d"),
+                        "datetype": "edat",
+                    },
+                    email=email, api_key=api_key, limiter=limiter, requester=requester,
+                )
+                result = response.json().get("esearchresult", {})
+                cached = {
+                    **segment_key_value,
+                    "segment_id": segment_id,
+                    "count": int(result.get("count", 0)),
+                    "pmids": [str(pmid) for pmid in result.get("idlist", [])],
+                    "completed_at": time.time(),
+                }
+                append_jsonl(segment_cache_path, cached)
+                segment_cache[segment_id] = cached
+                segment_requests_all += 1
+            segment_count += 1
+            count = int(cached.get("count", 0))
+            segment_pmids = {str(pmid) for pmid in cached.get("pmids", [])}
+            if count == 0 or (count <= retmax and len(segment_pmids) >= count):
+                expanded_pmids.update(segment_pmids)
+                expanded_count += count
+            elif uid_low is not None and uid_high is not None:
+                if uid_high <= uid_low:
+                    raise RuntimeError(f"PubMed overflow segment {segment_id} remains truncated at a single UID.")
+                midpoint = (uid_low + uid_high) // 2
+                stack.append((mindate, maxdate, midpoint + 1, uid_high))
+                stack.append((mindate, maxdate, uid_low, midpoint))
+            elif mindate < maxdate:
+                midpoint = mindate + (maxdate - mindate) // 2
+                stack.append((midpoint + timedelta(days=1), maxdate, None, None))
+                stack.append((mindate, midpoint, None, None))
+            else:
+                stack.append((mindate, maxdate, 1, max_uid))
+
+            if log and segment_requests_all and segment_requests_all % max(1, progress_every // 10) == 0:
+                elapsed = max(0.01, time.monotonic() - started_all)
+                rate = segment_requests_all / elapsed
+                queued_floor = len(stack)
+                print(
+                    f"PubMed overflow: query {query_index}/{len(query_rows)}; "
+                    f"{segment_count} segments examined; {queued_floor} queued; "
+                    f"ETA at least {queued_floor / rate / 60:.1f} min."
+                )
+
+        merged_pmids = sorted(original_pmids | expanded_pmids)
+        verified = expanded_count == len(expanded_pmids) and original_pmids.issubset(expanded_pmids)
+        updated = {
+            **item,
+            "pmids": merged_pmids,
+            "count": len(merged_pmids),
+            "search_complete": verified,
+            "search_incomplete_count": 0 if verified else max(1, len(merged_pmids) - expanded_count),
+            "overflow_expanded": True,
+            "overflow_date_field": "edat",
+            "overflow_segments": segment_count,
+            "overflow_completed_at": time.time(),
+        }
+        append_jsonl(query_cache_path, updated)
+        item.clear()
+        item.update(updated)
+        if log:
+            elapsed = max(0.01, time.monotonic() - started_all)
+            rate = query_index / elapsed
+            eta = (len(query_rows) - query_index) / rate / 60 if rate else 0
+            status = "complete" if verified else "verification mismatch"
+            print(
+                f"PubMed overflow: {query_index}/{len(query_rows)} species queries; "
+                f"{len(merged_pmids):,} PMIDs; {segment_count} segments; {status}; ETA {eta:.1f} min."
+            )
+    return query_rows
+
+
 def acquire_pubmed(
     species: pd.DataFrame,
     aliases: pd.DataFrame,
@@ -226,6 +384,7 @@ def acquire_pubmed(
     retmax: int = 10000,
     batch_size: int = 200,
     progress_every: int = 25,
+    expand_overflow: bool = False,
     requester=None,
     log: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -260,7 +419,6 @@ def acquire_pubmed(
     aliases_by_id = aliases.groupby("organism_id")["name"].apply(lambda x: list(dict.fromkeys(map(str, x.dropna())))).to_dict() if not aliases.empty else {}
     tasks = []
     active_query_ids: set[str] = set()
-    import hashlib
     for row in species[["organism_id", "organism_group", "accepted_name"]].drop_duplicates("organism_id").itertuples(index=False):
         raw_names = list(aliases_by_id.get(row.organism_id, []))
         names = [name for name in raw_names if len(" ".join(str(name).split())) >= 3 and not re.fullmatch(r"\d+(?:\.\d+)?", " ".join(str(name).split()))]
@@ -306,8 +464,24 @@ def acquire_pubmed(
         if log and (index % progress_every == 0 or index == len(tasks)):
             rate = index / max(0.01, time.monotonic() - search_start)
             print(f"PubMed search: {index:,}/{len(tasks):,}; ETA {(len(tasks)-index)/rate/60:.1f} min.")
-    associations = []
     active_queries = [query_cache[query_id] for query_id in active_query_ids if query_id in query_cache]
+    if expand_overflow:
+        overflow_queries = [item for item in active_queries if not item.get("search_complete", True)]
+        if log and overflow_queries:
+            print(f"PubMed overflow: expanding {len(overflow_queries):,} species queries beyond the {retmax:,}-PMID ESearch cap.")
+        _expand_query_overflow(
+            overflow_queries,
+            query_cache_path=query_path,
+            segment_cache_path=cache / "pubmed_search_overflow_segments.jsonl",
+            retmax=retmax,
+            email=email,
+            api_key=api_key,
+            limiter=limiter,
+            progress_every=progress_every,
+            requester=requester,
+            log=log,
+        )
+    associations = []
     for item in active_queries:
         for pmid in item.get("pmids", []):
             associations.append({"organism_id": item["organism_id"], "organism_group": item["organism_group"], "accepted_name": item["accepted_name"], "pmid": str(pmid),
@@ -317,15 +491,32 @@ def acquire_pubmed(
         match_frame = match_frame.drop_duplicates(["organism_id", "pmid"])
     missing_pmids, batches = _fetch_batches(match_frame, article_cache, batch_size=batch_size, max_batches=int(max_fetch_batches) if max_fetch_batches is not None else None)
     def fetch(batch: list[str]) -> list[dict[str, Any]]:
-        response = _request(f"{EUTILS}/efetch.fcgi", {"db": "pubmed", "id": ",".join(batch), "retmode": "xml"}, email=email, api_key=api_key, limiter=limiter, requester=requester)
-        return parse_article_xml(response.text)
+        parse_error = None
+        for attempt in range(3):
+            response = _request(
+                f"{EUTILS}/efetch.fcgi",
+                {"db": "pubmed", "id": ",".join(batch), "retmode": "xml"},
+                email=email, api_key=api_key, limiter=limiter, requester=requester,
+            )
+            try:
+                return parse_article_xml(response.text)
+            except ET.ParseError as exc:
+                parse_error = exc
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+        if len(batch) > 1:
+            midpoint = len(batch) // 2
+            if log:
+                print(f"PubMed fetch: malformed XML for a {len(batch)}-PMID batch; retrying as {midpoint} and {len(batch)-midpoint} PMID sub-batches.")
+            return fetch(batch[:midpoint]) + fetch(batch[midpoint:])
+        raise RuntimeError("PubMed returned malformed XML for a single-PMID fetch after retries.") from parse_error
     if log:
         print(f"PubMed abstract fetch: {len(article_cache):,} cached; {len(missing_pmids):,} missing across {len(batches):,} batches.")
     fetch_start = time.monotonic()
     for index, batch_rows in enumerate(_bounded_results(batches, fetch, max_workers), 1):
         for item in batch_rows:
             article_cache[str(item["pmid"])] = item; append_jsonl(article_path, item)
-        if log and (index % max(1, progress_every // 10) == 0 or index == len(batches)):
+        if log and (index % progress_every == 0 or index == len(batches)):
             rate = index / max(0.01, time.monotonic() - fetch_start)
             print(f"PubMed fetch: {index:,}/{len(batches):,} batches; ETA {(len(batches)-index)/rate/60:.1f} min.")
     abstracts_frame = pd.DataFrame(article_cache.values())
@@ -348,6 +539,15 @@ def acquire_pubmed(
             "pmids_beyond_retmax": sum(int(item.get("search_incomplete_count", 0)) for item in group_queries),
             "excluded_short_or_numeric_aliases": sum(int(item.get("excluded_alias_count", 0)) for item in group_queries),
         }
-    metadata = {"query_count": len(active_queries), "incomplete_query_count": sum(not item.get("search_complete", True) for item in active_queries), "search_incomplete_pmid_count": sum(int(item.get("search_incomplete_count", 0)) for item in active_queries), "query_summary_by_group": active_group_summaries, "species_abstract_matches": len(match_frame), "abstract_count": len(abstracts_frame), "cached_at": pd.Timestamp.utcnow().isoformat()}
+    metadata = {
+        "query_count": len(active_queries),
+        "incomplete_query_count": sum(not item.get("search_complete", True) for item in active_queries),
+        "search_incomplete_pmid_count": sum(int(item.get("search_incomplete_count", 0)) for item in active_queries),
+        "overflow_expanded_query_count": sum(bool(item.get("overflow_expanded")) for item in active_queries),
+        "query_summary_by_group": active_group_summaries,
+        "species_abstract_matches": len(match_frame),
+        "abstract_count": len(abstracts_frame),
+        "cached_at": pd.Timestamp.utcnow().isoformat(),
+    }
     (release / "acquisition_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return match_frame, abstracts_frame
