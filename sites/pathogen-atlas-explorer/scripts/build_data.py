@@ -253,8 +253,11 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
                               "feature_ids_yes", "feature_confidences"]
             rows = [{key: _safe_json(val) for key, val in row.items() if key in public_columns}
                     for row in selected.to_dict("records")]
-            shard = hashlib.sha256(str(organism_id).encode()).hexdigest()[:16] + ".json"
-            (evidence_root / shard).write_text(json.dumps(rows, ensure_ascii=False, default=str), encoding="utf-8")
+            shard_contents = json.dumps(rows, ensure_ascii=False, default=str)
+            # Include the shard contents in its name so changed feature decisions
+            # cannot be hidden behind a browser or CDN cache of the previous file.
+            shard = hashlib.sha256(shard_contents.encode("utf-8")).hexdigest()[:16] + ".json"
+            (evidence_root / shard).write_text(shard_contents, encoding="utf-8")
             evidence_files[str(organism_id)] = f"evidence/{shard}"
     species_rows = []
     for row in species.to_dict("records"):
