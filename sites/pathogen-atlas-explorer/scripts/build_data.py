@@ -42,6 +42,8 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     if not species_path.exists():
         raise FileNotFoundError("Run Phase 4 before building Explorer data.")
     species = pd.read_parquet(species_path)
+    release_metadata_path = release / "release_metadata.json"
+    release_metadata = json.loads(release_metadata_path.read_text(encoding="utf-8")) if release_metadata_path.exists() else {}
     if not index_path.exists():
         raise FileNotFoundError("Run Phase 4 and notebooks/08_pathogenic_interest_index.ipynb before building Explorer data.")
     index = pd.read_parquet(index_path)
@@ -58,12 +60,14 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
     coords = pd.read_parquet(coordinate_path) if coordinate_path.exists() else pd.DataFrame()
     v2_release_root = ROOT / "data/migration/version2_snapshot/04_tables/release"
     v2_species_path = v2_release_root / "species_summary.parquet"
+    v2_pathogenic_index_path = v2_release_root / "pathogenic_index.parquet"
     v2_evidence_path = v2_release_root / "evidence_records.parquet"
     v2_feature_matrix_path = v2_release_root / "species_feature_matrix.parquet"
     v2_feature_summary_path = v2_release_root / "species_feature_summary.parquet"
     v2_answers_path = v2_release_root / "domain_expert_answers.parquet"
     v2_coordinates_path = ROOT / "data/migration/version2_snapshot/05_plots/release/species_feature_space_coordinates.parquet"
     v2_species = pd.read_parquet(v2_species_path) if v2_species_path.exists() else pd.DataFrame()
+    v2_pathogenic_index = pd.read_parquet(v2_pathogenic_index_path) if v2_pathogenic_index_path.exists() else pd.DataFrame()
     v2_evidence = pd.read_parquet(v2_evidence_path) if v2_evidence_path.exists() else pd.DataFrame()
     v2_feature_matrix = pd.read_parquet(v2_feature_matrix_path) if v2_feature_matrix_path.exists() else pd.DataFrame()
     v2_feature_summary = pd.read_parquet(v2_feature_summary_path) if v2_feature_summary_path.exists() else pd.DataFrame()
@@ -73,6 +77,10 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
         str(row.canonical_species).casefold(): row._asdict()
         for row in v2_species.itertuples(index=False)
     } if not v2_species.empty else {}
+    v2_index_by_name = {
+        str(row.canonical_species).casefold(): row._asdict()
+        for row in v2_pathogenic_index.itertuples(index=False)
+    } if not v2_pathogenic_index.empty else {}
     bacteria_organism_by_name = {
         str(row.accepted_name).casefold(): str(row.organism_id)
         for row in species.loc[species["organism_group"].eq("bacteria")].itertuples(index=False)
@@ -266,6 +274,14 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
             item.update(index_row)
         if item.get("organism_group") == "bacteria" and name_key in v2_summary_by_name:
             legacy = v2_summary_by_name[name_key]
+            legacy_index = v2_index_by_name.get(name_key, {})
+            item["n_pathogen_pmids"] = int(legacy.get("n_causation", 0) or 0)
+            item["n_pubmed_search_records"] = int(legacy.get("n_articles", 0) or 0)
+            item["n_abstracts_fetched"] = int(legacy.get("n_sampled", 0) or 0)
+            item["estimated_pathogen_pmids"] = _safe_json(legacy_index.get("estimated_causation", 0))
+            item["log_estimated_pathogen_pmids"] = _safe_json(legacy_index.get("log_estimated_causation", 0))
+            item["pathogenic_interest_index"] = _safe_json(legacy_index.get("pathogenic_index", 0))
+            item["index_version"] = "v2-compatibility-snapshot"
             item["feature_values"] = v2_features_by_name.get(name_key, {})
             item["feature_counts"] = v2_feature_counts_by_name.get(name_key, {})
         legacy_name_fallback = name_key if str(item.get("organism_group", "")).casefold() == "bacteria" else None
@@ -299,7 +315,9 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
              "feature_assessments_completed": int(feature_status_counts.get("completed", 0)),
              "feature_assessments_failed": int(feature_status_counts.get("failed", 0)),
              "pubmed_search_records": sum(int(item.get("n_pubmed_search_records", 0) or 0) for item in species_rows),
-             "feature_count": len(feature_definitions)}
+             "feature_count": len(feature_definitions),
+             "pathogen_question_version": release_metadata.get("pathogen_question_version"),
+             "feature_question_set_version": release_metadata.get("feature_question_set_version")}
     # Publish the same hierarchy used by the scoring config so the Explorer can
     # present feature summaries as dimension > category > feature.
     feature_hierarchy = []
