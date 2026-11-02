@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from pathogen_atlas_v3.common.io import atomic_parquet, load_yaml
+from pathogen_atlas_v3.common.config import selected_organism_groups
 from pathogen_atlas_v3.decisions.runner import prepare_species_abstracts
 from pathogen_atlas_v3.decisions.features import load_feature_catalog
 from pathogen_atlas_v3.tables.interest_index import INDEX_VERSION, build_pathogenic_interest_index
@@ -18,6 +19,7 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
     config = load_yaml(config_path)
     paths, decision = config["paths"], config["decisions"]
     sampling = config.get("pubmed", {}).get("sampling", {})
+    selected_groups = set(selected_organism_groups(config))
     taxonomy_root = Path(paths["taxonomy_release"])
     pubmed_root = Path(paths["pubmed_release"])
     species = pd.read_parquet(taxonomy_root / "species.parquet")
@@ -44,6 +46,16 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
     ].copy() if not ledger.empty else pd.DataFrame()
     if not gate.empty:
         gate = gate.merge(current_pairs, on=["organism_id", "pmid", "input_hash"], how="inner", validate="many_to_one")
+        completed_gate = gate.loc[gate["status"].astype(str).eq("completed"), ["organism_id", "pmid", "input_hash"]].drop_duplicates()
+    else:
+        completed_gate = pd.DataFrame(columns=["organism_id", "pmid", "input_hash"])
+    scoped_pairs = current_pairs.merge(species[["organism_id", "organism_group"]].drop_duplicates(), on="organism_id", how="left")
+    scoped_pairs = scoped_pairs.loc[scoped_pairs["organism_group"].astype(str).isin(selected_groups), ["organism_id", "pmid", "input_hash"]]
+    missing_gate = scoped_pairs.merge(completed_gate, on=["organism_id", "pmid", "input_hash"], how="left", indicator=True)
+    missing_gate = missing_gate.loc[missing_gate["_merge"].eq("left_only")]
+    if not missing_gate.empty:
+        raise RuntimeError(f"Phase 4 release blocked: {len(missing_gate):,} selected species–PMID pairs lack a completed pathogen gate decision for question version {decision.get('pathogen_question_version')}.")
+    if not gate.empty:
         gate["p_yes"] = pd.to_numeric(gate["p_yes"], errors="coerce")
         gate["candidate_pathogen_evidence"] = gate["status"].astype(str).eq("completed") & gate["p_yes"].ge(float(decision.get("pathogen_threshold", .75)))
         evaluation_approved = bool(decision.get("release_evaluation_approved", False))
@@ -64,14 +76,15 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
     index = build_pathogenic_interest_index(summary[["organism_id", "organism_group", "n_pathogen_pmids", "n_abstracts_fetched", "n_pubmed_search_records"]])
     summary = summary.merge(index, on=["organism_id", "organism_group", "n_pathogen_pmids", "n_abstracts_fetched", "n_pubmed_search_records"], how="left")
 
+    catalog, feature_profiles = load_feature_catalog("configs/features.yaml", "configs/feature_profiles.yaml", allow_provisional=True)
     features = ledger.loc[
         ledger["decision_kind"].astype(str).eq("feature")
         & ledger["run_id"].astype(str).eq("v3-features-v1")
         & ledger["question_version"].astype(str).eq(str(decision.get("feature_question_set_version")))
+        & ledger["profile_version"].astype(str).eq(str(catalog["version"]))
     ].copy() if not ledger.empty else pd.DataFrame()
     if not features.empty:
         features = features.merge(current_pairs, on=["organism_id", "pmid", "input_hash"], how="inner", validate="many_to_one")
-        catalog, _ = load_feature_catalog("configs/features.yaml", "configs/feature_profiles.yaml", allow_provisional=True)
         hierarchy = catalog["features"]
         for column, key in (("dimension_id", "dimension_id"), ("dimension", "dimension_label"),
                             ("category_id", "category_id"), ("category", "category"),
@@ -82,7 +95,31 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
         features["p_yes"] = pd.to_numeric(features["p_yes"], errors="coerce")
         features["answer_yes"] = features["status"].astype(str).eq("completed") & features["p_yes"].ge(float(decision.get("feature_yes_threshold", .75)))
         features["scored"] = features["status"].astype(str).eq("completed") & features["p_yes"].notna()
-        feature_summary = features.groupby(["organism_id", "organism_group", "feature_id", "dimension_id", "dimension", "category_id", "category", "question", "question_claim", "definition"], dropna=False, as_index=False).agg(n_scored=("scored", "sum"), n_yes=("answer_yes", "sum"), p_yes_mean=("p_yes", "mean"))
+    expected_feature_pairs = accepted[["organism_id", "organism_group", "pmid"]].drop_duplicates().copy()
+    expected_feature_pairs["n_expected"] = expected_feature_pairs["organism_group"].map(lambda group: len(feature_profiles.get(str(group), [])))
+    expected_feature_pairs = expected_feature_pairs.loc[expected_feature_pairs["n_expected"].gt(0)]
+    if not expected_feature_pairs.empty:
+        if features.empty:
+            completed_feature_counts = pd.DataFrame(columns=["organism_id", "pmid", "n_completed"])
+        else:
+            completed_feature_counts = features.loc[features["status"].astype(str).eq("completed") & pd.to_numeric(features["p_yes"], errors="coerce").notna()].groupby(["organism_id", "pmid"], as_index=False).agg(n_completed=("feature_id", "nunique"))
+        coverage = expected_feature_pairs.merge(completed_feature_counts, on=["organism_id", "pmid"], how="left")
+        coverage["n_completed"] = pd.to_numeric(coverage["n_completed"], errors="coerce").fillna(0).astype("int64")
+        coverage["n_missing"] = (coverage["n_expected"] - coverage["n_completed"]).clip(lower=0)
+        incomplete = coverage.loc[coverage["n_missing"].gt(0)]
+        if not incomplete.empty:
+            missing_total = int(incomplete["n_missing"].sum())
+            raise RuntimeError(f"Phase 4 release blocked: {missing_total:,} feature assessments remain incomplete across {len(incomplete):,} accepted species–PMID pairs. Retry Phase 3 until every applicable feature has a completed score.")
+    if not features.empty:
+        feature_summary = features.groupby(["organism_id", "organism_group", "feature_id", "dimension_id", "dimension", "category_id", "category", "question", "question_claim", "definition"], dropna=False, as_index=False).agg(
+            n_scored=("scored", "sum"), n_yes=("answer_yes", "sum"),
+            n_failed=("status", lambda status: status.astype(str).eq("failed").sum()),
+            p_yes_mean=("p_yes", "mean"),
+        )
+        expected = pathogen_counts.set_index("organism_id")["n_pathogen_pmids"] if not pathogen_counts.empty else pd.Series(dtype="int64")
+        feature_summary["n_expected"] = feature_summary["organism_id"].astype(str).map(expected)
+        feature_summary["n_expected"] = pd.to_numeric(feature_summary["n_expected"], errors="coerce").fillna(0).astype("int64")
+        feature_summary["n_pending"] = (feature_summary["n_expected"] - feature_summary["n_scored"] - feature_summary["n_failed"]).clip(lower=0)
         feature_summary["share_yes"] = feature_summary["n_yes"] / feature_summary["n_scored"].replace(0, pd.NA)
         feature_summary["feature_profile_version"] = features["profile_version"].astype(str).iloc[0]
         feature_summary["evaluation_approved"] = bool(decision.get("release_evaluation_approved", False))
@@ -90,7 +127,7 @@ def build_phase4(config_path: str = "configs/default.yaml", *, decision_path: st
         matrix = feature_summary.pivot(index=["organism_id", "organism_group"], columns="feature_id", values="share_yes").reset_index()
         matrix.columns.name = None
     else:
-        feature_summary = pd.DataFrame(columns=["organism_id", "organism_group", "feature_id", "dimension_id", "dimension", "category_id", "category", "question", "question_claim", "definition", "n_scored", "n_yes", "p_yes_mean", "share_yes"])
+        feature_summary = pd.DataFrame(columns=["organism_id", "organism_group", "feature_id", "dimension_id", "dimension", "category_id", "category", "question", "question_claim", "definition", "n_scored", "n_yes", "n_failed", "n_expected", "n_pending", "p_yes_mean", "share_yes"])
         matrix = pd.DataFrame(columns=["organism_id", "organism_group"])
     atomic_parquet(summary, out / "species_summary.parquet")
     atomic_parquet(index, out / "pathogenic_interest_index.parquet")

@@ -14,7 +14,7 @@ The 73 inherited bacteria questions preserve their legacy identifiers and source
 
 ## Decisions and evidence
 
-The disease gate and feature assessments share one normalized ledger. Its cache identity includes organism group and stable ID, PMID, abstract/title hash, model, question version, feature-profile version, and run ID. One Jev request contains all currently applicable feature questions for one passing abstract. Raw responses are appended before normalization; malformed or failed rows remain in the ledger with errors and can be retried.
+The disease gate and feature assessments share one normalized ledger. Its cache identity includes organism group and stable ID, PMID, abstract/title hash, model, question version, feature-profile version, and run ID. One Jev request contains all currently applicable feature questions for one passing abstract. Raw responses are appended before normalization. With no call cap, transient request and incomplete-answer failures are retried until every applicable score completes; permanent provider errors stop the run explicitly. Progress logs report incomplete species–PMID pairs as well as failed feature rows. Phase 4 refuses to publish while a selected gate decision or an applicable feature score is missing. The Explorer shows each feature's completed count against accepted pathogen PMIDs, with failed and pending counts.
 
 The disease gate defaults to `p_yes >= 0.75`. A sampled abstract that meets this threshold is accepted pathogen evidence and is included in the Phase 4 release. Feature scores remain separate supporting characterizations; they do not override the disease-attribution gate.
 

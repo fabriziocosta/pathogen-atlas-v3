@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from itertools import islice
 import json
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
@@ -78,7 +79,7 @@ def _response_rows(response: dict[str, Any], question_map: dict[str, dict[str, A
             status, error = SUCCESS, None
         except Exception as exc:
             p_yes, status, error = None, "failed", f"{type(exc).__name__}: {exc}"
-        rows.append({**base, "feature_id": qid, "p_yes": p_yes, "status": status, "error": error,
+        rows.append({**base, "feature_id": qid, "p_yes": p_yes, "status": status, "error": error, "retryable": status != SUCCESS,
                      "dimension_id": question.get("dimension_id"), "dimension": question.get("dimension_label"),
                      "category_id": question.get("category_id"), "category": question.get("category"),
                      "question": question.get("question"), "question_claim": question.get("question_claim"),
@@ -110,8 +111,9 @@ def _call_group(row: Any, *, kind: str, questions: dict[str, dict[str, Any]], ru
     except Exception as exc:
         base["attempts"] = int(getattr(exc, "attempts", 1))
         base["completed_at"] = datetime.now(timezone.utc).isoformat()
+        retryable = bool(getattr(exc, "retryable", False))
         status_rows = [{**base, "feature_id": qid, "p_yes": None, "status": "failed",
-                        "error": f"{type(exc).__name__}: {exc}", "dimension_id": q.get("dimension_id"),
+                        "error": f"{type(exc).__name__}: {exc}", "retryable": retryable, "dimension_id": q.get("dimension_id"),
                         "dimension": q.get("dimension_label"), "category_id": q.get("category_id"),
                         "category": q.get("category"), "question": q.get("question"),
                         "question_claim": q.get("question_claim"), "definition": q.get("definition")} for qid, q in questions.items()]
@@ -184,18 +186,11 @@ def run_decision_stage(
         model = str(client.model)
         keys = [(str(row.organism_id), str(row.pmid), str(row.input_hash), model, str(question_version), str(profile_version), str(run_id), str(qid)) for qid in questions]
         return questions, [qid for qid, key in zip(questions, keys) if key not in successful]
-    pending_total = sum(bool(questions_missing(row)[1]) for row in prepared.itertuples(index=False))
-    total = min(pending_total, int(max_calls)) if max_calls is not None else pending_total
     def pending_tasks():
-        submitted = 0
         for row in prepared.itertuples(index=False):
             questions, missing = questions_missing(row)
-            if not missing:
-                continue
-            yield row, {qid: questions[qid] for qid in missing}
-            submitted += 1
-            if submitted >= total:
-                break
+            if missing:
+                yield row, {qid: questions[qid] for qid in missing}
     started = time.monotonic()
     balance_method = getattr(client, "remaining_balance", None)
     starting_balance: float | None = None
@@ -205,88 +200,112 @@ def run_decision_stage(
     last_balance_poll = 0.0
     credit_burn_per_second: float | None = None
     if log:
-        print(f"{kind}: {len(prepared):,} pairs; {len(prepared)-pending_total:,} cached; {total:,} calls scheduled ({pending_total:,} pending); up to {max_workers} concurrent requests.")
-        if total and callable(balance_method):
+        first_pending = sum(1 for _ in pending_tasks())
+        print(f"{kind}: {len(prepared):,} pairs; {len(prepared)-first_pending:,} fully cached; {first_pending:,} calls scheduled; up to {max_workers} concurrent requests.", flush=True)
+        if first_pending and callable(balance_method):
             starting_balance, balance_label = balance_method()
             latest_balance = starting_balance
             latest_balance_at = last_balance_poll = time.monotonic()
             print(f"{kind}: {balance_label} at start: ${starting_balance:.4f}." if starting_balance is not None else f"{kind}: {balance_label}.")
     new_rows: list[dict[str, Any]] = []
-    if total:
-        tasks = iter(pending_tasks())
+    retry_round = 0
+    capped = max_calls is not None
+    total_scheduled = 0
+    total = 0
+
+    def checkpoint() -> None:
+        nonlocal ledger, new_rows
+        if not new_rows:
+            return
+        new_frame = pd.DataFrame(new_rows)
+        if ledger.empty:
+            updated = new_frame
+        else:
+            columns = list(dict.fromkeys([*ledger.columns, *new_frame.columns]))
+            all_null = [column for column in columns if (column not in ledger or ledger[column].isna().all()) and (column not in new_frame or new_frame[column].isna().all())]
+            left_null = [column for column in ledger if ledger[column].isna().all()]
+            right_null = [column for column in new_frame if new_frame[column].isna().all()]
+            left = ledger.drop(columns=left_null)
+            right = new_frame.drop(columns=right_null)
+            updated = pd.concat([left, right], ignore_index=True, sort=False)
+            for column in all_null:
+                updated[column] = pd.NA
+        key_cols = ["organism_id", "pmid", "decision_kind", "input_hash", "model", "question_version", "profile_version", "run_id", "feature_id"]
+        ledger = updated.drop_duplicates(key_cols, keep="last")
+        atomic_parquet(ledger, output_path)
+        new_rows.clear()
+
+    while True:
+        pending_total = sum(1 for _ in pending_tasks())
+        if pending_total == 0:
+            break
+        total = min(pending_total, int(max_calls)) if capped else pending_total
+        if total == 0:
+            break
+        retry_round += 1
+        if retry_round > 1:
+            delay = min(300, 10 * (2 ** min(retry_round - 2, 5)))
+            if log:
+                print(f"{kind}: retry round {retry_round}; {pending_total:,} species–PMID pairs still incomplete; waiting {delay}s before retry.", flush=True)
+            time.sleep(delay)
+        if log:
+            print(f"{kind}: round {retry_round}; {total:,} requests; {pending_total:,} pairs still need scores; concurrency {max_workers}.", flush=True)
+        task_iter = islice(pending_tasks(), total)
+        completed = 0
+        failed_rows = 0
+        failed_pairs = 0
+        failed_species_counts: dict[str, int] = {}
+        terminal_errors: set[tuple[str, str, str]] = set()
         with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix=f"v3-{kind}") as executor:
             in_flight = set()
             for _ in range(min(total, max_workers * 2)):
-                row, qmap = next(tasks)
+                row, qmap = next(task_iter)
                 in_flight.add(executor.submit(_call_group, row, kind=kind, questions=qmap, run_id=run_id, question_version=question_version, profile_version=profile_version, client=client, raw_path=raw_path))
-            completed = 0
-            failed_total = 0
             while in_flight:
                 done, in_flight = wait(in_flight, return_when=FIRST_COMPLETED)
                 for future in done:
                     rows, _raw = future.result()
                     new_rows.extend(rows)
                     completed += 1
-                    failed_total += sum(r["status"] != SUCCESS for r in rows)
+                    failed = [r for r in rows if r["status"] != SUCCESS]
+                    failed_rows += len(failed)
+                    failed_pairs += int(bool(failed))
+                    if failed:
+                        species_name = str(rows[0].get("accepted_name") or rows[0].get("organism_id", "unknown"))
+                        failed_species_counts[species_name] = failed_species_counts.get(species_name, 0) + 1
+                    for result in rows:
+                        if result["status"] == SUCCESS:
+                            successful.add((str(result["organism_id"]), str(result["pmid"]), str(result["input_hash"]), str(result["model"]), str(result["question_version"]), str(result["profile_version"]), str(result["run_id"]), str(result["feature_id"])))
+                        elif not bool(result.get("retryable", False)):
+                            terminal_errors.add((str(result["organism_id"]), str(result["pmid"]), str(result.get("error", "non-retryable decision error"))))
                     try:
-                        row, qmap = next(tasks)
+                        row, qmap = next(task_iter)
                         in_flight.add(executor.submit(_call_group, row, kind=kind, questions=qmap, run_id=run_id, question_version=question_version, profile_version=profile_version, client=client, raw_path=raw_path))
                     except StopIteration:
                         pass
+                total_scheduled += len(done)
                 if completed % max(1, checkpoint_every) < len(done) or completed == total:
-                    new_frame = pd.DataFrame(new_rows)
-                    if ledger.empty:
-                        updated = new_frame
-                    else:
-                        columns = list(dict.fromkeys([*ledger.columns, *new_frame.columns]))
-                        all_null = [column for column in columns if (column not in ledger or ledger[column].isna().all()) and (column not in new_frame or new_frame[column].isna().all())]
-                        left_null = [column for column in ledger if ledger[column].isna().all()]
-                        right_null = [column for column in new_frame if new_frame[column].isna().all()]
-                        left = ledger.drop(columns=left_null)
-                        right = new_frame.drop(columns=right_null)
-                        updated = pd.concat([left, right], ignore_index=True, sort=False)
-                        for column in all_null:
-                            updated[column] = pd.NA
-                    # New rows supersede only rows with the same full logical key.
-                    key_cols = ["organism_id", "pmid", "decision_kind", "input_hash", "model", "question_version", "profile_version", "run_id", "feature_id"]
-                    updated = updated.drop_duplicates(key_cols, keep="last")
-                    atomic_parquet(updated, output_path)
-                    ledger = updated
-                    if log and (completed % log_every < len(done) or completed == total):
-                        elapsed = time.monotonic() - started
-                        rate = completed / elapsed if elapsed else 0
-                        eta = (total - completed) / rate if rate else 0
-                        balance_note = ""
-                        now = time.monotonic()
-                        if callable(balance_method) and now - last_balance_poll >= balance_poll_interval_seconds:
-                            observed_balance, observed_label = balance_method()
-                            last_balance_poll = now
-                            if observed_balance is not None:
-                                if latest_balance is not None and latest_balance_at is not None and observed_label == balance_label:
-                                    sample_elapsed = now - latest_balance_at
-                                    sample_burn = (latest_balance - observed_balance) / sample_elapsed if sample_elapsed > 0 else 0
-                                    if sample_burn > 0:
-                                        credit_burn_per_second = sample_burn
-                                    elif observed_balance > latest_balance:
-                                        # A top-up invalidates the previous observed depletion rate.
-                                        credit_burn_per_second = None
-                                latest_balance = float(observed_balance)
-                                latest_balance_at = now
-                                balance_label = observed_label
-                        if latest_balance is not None:
-                            if balance_label == "account credits" and credit_burn_per_second and credit_burn_per_second > 0:
-                                projected_balance = latest_balance - credit_burn_per_second * eta
-                                if projected_balance >= 0:
-                                    balance_note = f"; credits ${latest_balance:.4f}; est. credits at stage end ${projected_balance:.4f}"
-                                else:
-                                    balance_note = f"; credits ${latest_balance:.4f}; est. shortfall at stage end ${abs(projected_balance):.4f}"
-                            elif balance_label == "account credits":
-                                balance_note = f"; credits ${latest_balance:.4f}; est. credits at stage end calculating"
-                            else:
-                                balance_note = f"; {balance_label} ${latest_balance:.4f}"
-                        eta_text = f"{eta/60:.1f} min" if eta < 3600 else f"{eta/3600:.2f} h"
-                        print(f"{kind}: {completed:,}/{total:,} ({completed/total:.1%}); failures {failed_total:,}; ETA {eta_text}{balance_note}.")
-                    new_rows.clear()
+                    checkpoint()
+                if log and (completed % log_every < len(done) or completed == total):
+                    elapsed = time.monotonic() - started
+                    rate = total_scheduled / elapsed if elapsed else 0
+                    eta = pending_total / rate if rate else 0
+                    eta_text = f"{eta/60:.1f} min" if eta < 3600 else f"{eta/3600:.2f} h"
+                    affected = ", ".join(f"{name} ({count})" for name, count in sorted(failed_species_counts.items(), key=lambda item: (-item[1], item[0]))[:5])
+                    species_note = f"; affected species: {affected}" if affected else ""
+                    print(f"{kind}: round {retry_round} {completed:,}/{total:,}; {failed_pairs:,} pairs with failed answers ({failed_rows:,} feature rows){species_note}; overall ETA {eta_text}.", flush=True)
+        checkpoint()
+        if terminal_errors:
+            examples = "; ".join(error for _, _, error in list(terminal_errors)[:3])
+            raise RuntimeError(f"{kind}: {len(terminal_errors):,} species–PMID pairs have non-retryable errors; refusing incomplete results. Examples: {examples}")
+        if capped:
+            break
+    remaining = sum(1 for _ in pending_tasks())
+    if log:
+        if remaining:
+            print(f"{kind}: {remaining:,} pairs still need scores; run cap prevented full coverage.", flush=True)
+        else:
+            print(f"{kind}: 100% coverage; every applicable decision is completed.", flush=True)
     if not output_path.exists():
         atomic_parquet(pd.DataFrame(columns=["organism_id", "organism_group", "pmid", "decision_kind", "feature_id", "input_hash", "provider", "model", "question_version", "profile_version", "run_id", "p_yes", "status", "attempts", "error", "completed_at", "raw_response_path", "decision_source", "source_project", "source_question_version", "source_profile_version", "source_run_id", "source_input_hash", "source_record_path"]), output_path)
     if log and total and callable(balance_method):
@@ -304,10 +323,13 @@ def run_pathogen_gate(abstracts: pd.DataFrame, species_matches: pd.DataFrame, pr
     return run_decision_stage(abstracts, species_matches, kind="pathogen_evidence", questions_by_domain=questions, **kwargs)
 
 
-def run_domain_features(abstracts: pd.DataFrame, species_matches: pd.DataFrame, gate_decisions: pd.DataFrame, *, threshold: float, questions_by_domain: dict[str, dict[str, dict[str, Any]]], gate_run_id: str, **kwargs: Any) -> pd.DataFrame:
+def run_domain_features(abstracts: pd.DataFrame, species_matches: pd.DataFrame, gate_decisions: pd.DataFrame, *, threshold: float, questions_by_domain: dict[str, dict[str, dict[str, Any]]], gate_run_id: str, gate_question_version: str | None = None, **kwargs: Any) -> pd.DataFrame:
     """Ask all applicable features once per abstract after the pathogen gate passes."""
     prepared = prepare_species_abstracts(abstracts, species_matches)
-    gate = gate_decisions.loc[(gate_decisions["run_id"].astype(str) == str(gate_run_id)) & (gate_decisions["decision_kind"].astype(str) == "pathogen_evidence") & (gate_decisions["status"].astype(str) == SUCCESS) & (pd.to_numeric(gate_decisions["p_yes"], errors="coerce") >= float(threshold))]
+    gate_mask = (gate_decisions["run_id"].astype(str) == str(gate_run_id)) & (gate_decisions["decision_kind"].astype(str) == "pathogen_evidence") & (gate_decisions["status"].astype(str) == SUCCESS) & (pd.to_numeric(gate_decisions["p_yes"], errors="coerce") >= float(threshold))
+    if gate_question_version is not None:
+        gate_mask &= gate_decisions["question_version"].astype(str).eq(str(gate_question_version))
+    gate = gate_decisions.loc[gate_mask]
     key_cols = ["organism_id", "pmid", "input_hash"]
     passing = gate[key_cols].drop_duplicates()
     selected = prepared.merge(passing, on=key_cols, how="inner", validate="one_to_one")

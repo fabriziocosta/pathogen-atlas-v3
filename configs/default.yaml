@@ -52,9 +52,9 @@ decisions:
   provider: openrouter_jev
   model: typesafe/jev-1.14
   endpoint: https://openrouter.ai/api/alpha/decisions
-  timeout_seconds: 90
-  retries: 3
-  backoff_seconds: 1.0
+  timeout_seconds: 180
+  retries: 5
+  backoff_seconds: 2.0
   max_workers: 4
   max_calls: null
   pathogen_question_version: human-disease-attribution-v3.2

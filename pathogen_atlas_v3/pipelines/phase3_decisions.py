@@ -63,11 +63,18 @@ def phase3_preflight(config_path: str = "configs/default.yaml") -> dict:
     if ledger_path.exists():
         ledger = pd.read_parquet(ledger_path)
         selected_organisms = set(matches["organism_id"].astype(str))
-        gate = ledger.loc[ledger["decision_kind"].astype(str).eq("pathogen_evidence") & ledger["run_id"].astype(str).eq("v3-gate-v1") & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
+        gate = ledger.loc[ledger["decision_kind"].astype(str).eq("pathogen_evidence") & ledger["run_id"].astype(str).eq("v3-gate-v1") & ledger["question_version"].astype(str).eq(str(decisions["pathogen_question_version"])) & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
         cached_gate = gate[["organism_id", "pmid"]].drop_duplicates().shape[0]
         passing = gate.loc[pd.to_numeric(gate["p_yes"], errors="coerce").ge(float(decisions.get("pathogen_threshold", .75))), ["organism_id", "pmid"]].drop_duplicates()
-        feat = ledger.loc[ledger["decision_kind"].astype(str).eq("feature") & ledger["run_id"].astype(str).eq("v3-features-v1") & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
-        cached_feature = feat[["organism_id", "pmid"]].drop_duplicates().shape[0]
+        feat = ledger.loc[ledger["decision_kind"].astype(str).eq("feature") & ledger["run_id"].astype(str).eq("v3-features-v1") & ledger["question_version"].astype(str).eq(str(decisions["feature_question_set_version"])) & ledger["profile_version"].astype(str).eq(str(catalog["version"])) & ledger["status"].astype(str).eq("completed") & ledger["organism_id"].astype(str).isin(selected_organisms)]
+        if passing is not None and not passing.empty and not feat.empty:
+            feat = feat.merge(passing, on=["organism_id", "pmid"], how="inner")
+            completed_features = feat.groupby(["organism_id", "pmid"], as_index=False)["feature_id"].nunique()
+            expected_by_organism = matches[["organism_id", "organism_group"]].drop_duplicates().assign(
+                expected=lambda frame: frame["organism_group"].map(lambda group: len(feature_profiles.get(str(group), [])))
+            )
+            completed_features = completed_features.merge(expected_by_organism, on="organism_id", how="left")
+            cached_feature = int(completed_features["feature_id"].ge(completed_features["expected"]).sum())
     pending_gate = max(0, gate_pairs - cached_gate)
     expected_fraction = float(decisions["cost_estimate"].get("expected_pathogen_fraction", .5))
     feature_calls = (int(len(passing)) + int(round(pending_gate * expected_fraction))) if passing is not None else int(gate_pairs * expected_fraction)
@@ -109,7 +116,7 @@ def run_phase3(config_path: str = "configs/default.yaml", *, max_calls: int | No
     common = {"run_id": "v3-gate-v1", "question_version": settings["pathogen_question_version"], "profile_version": "pathogen-gate-v3.1", "ledger_path": paths["decision_ledger"], "raw_response_path": paths["raw_responses"], "max_calls": limit, "max_workers": int(settings.get("max_workers", 48)), "checkpoint_every": checkpoint_every, "log_every": log_every, "balance_poll_interval_seconds": float(logging_settings.get("balance_poll_interval_seconds", 60)), "client": client, "log": log}
     gate = run_pathogen_gate(abstracts, matches, prompt, **common)
     feature_common = {**common, "run_id": "v3-features-v1", "question_version": settings["feature_question_set_version"], "profile_version": catalog["version"], "max_calls": limit, "log_every": feature_log_every}
-    features = run_domain_features(abstracts, matches, gate, threshold=float(settings.get("pathogen_threshold", .75)), questions_by_domain=question_maps, gate_run_id="v3-gate-v1", **feature_common)
+    features = run_domain_features(abstracts, matches, gate, threshold=float(settings.get("pathogen_threshold", .75)), questions_by_domain=question_maps, gate_run_id="v3-gate-v1", gate_question_version=str(settings["pathogen_question_version"]), **feature_common)
     return {"gate": gate, "features": features}
 
 

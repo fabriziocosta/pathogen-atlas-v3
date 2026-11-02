@@ -53,9 +53,10 @@ class DecisionClient(Protocol):
 
 
 class JevRequestError(RuntimeError):
-    def __init__(self, message: str, *, attempts: int):
+    def __init__(self, message: str, *, attempts: int, retryable: bool = True):
         super().__init__(message)
         self.attempts = attempts
+        self.retryable = retryable
 
 
 class OpenRouterJevClient:
@@ -101,6 +102,7 @@ class OpenRouterJevClient:
         payload = {"model": self.model, "state": state, "questions": {key: {"type": q["type"], "instructions": q["instructions"], "criteria": q.get("criteria", {})} for key, q in questions.items()}}
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         last_error: Exception | None = None
+        retryable = False
         for attempt in range(self.retries + 1):
             session = self._provided_session or getattr(self._thread_state, "session", None)
             if session is None:
@@ -116,14 +118,15 @@ class OpenRouterJevClient:
                 return value
             except Exception as exc:
                 last_error = exc
-                transient = isinstance(exc, (requests.Timeout, requests.ConnectionError))
+                transient = isinstance(exc, (requests.Timeout, requests.ConnectionError, requests.exceptions.JSONDecodeError))
                 if isinstance(exc, requests.HTTPError):
                     status = exc.response.status_code if exc.response is not None else 0
                     transient = status == 429 or 500 <= status < 600
+                retryable = transient
                 if not transient or attempt == self.retries:
                     break
                 time.sleep(self.backoff_seconds * (2 ** attempt))
-        raise JevRequestError(f"Jev request failed: {last_error}", attempts=attempt + 1) from last_error
+        raise JevRequestError(f"Jev request failed: {last_error}", attempts=attempt + 1, retryable=retryable) from last_error
 
 
 def extract_noul_probability(response: dict[str, Any], question_id: str) -> float:

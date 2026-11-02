@@ -138,6 +138,9 @@ def build_site_data(config_path: str = "configs/default.yaml") -> dict:
             feature_counts_map.setdefault(organism_id, {})[feature_id] = {
                 "n_yes": int(row.n_yes) if pd.notna(row.n_yes) else 0,
                 "n_scored": int(row.n_scored) if pd.notna(row.n_scored) else 0,
+                "n_failed": int(row.n_failed) if hasattr(row, "n_failed") and pd.notna(row.n_failed) else 0,
+                "n_expected": int(row.n_expected) if hasattr(row, "n_expected") and pd.notna(row.n_expected) else 0,
+                "n_pending": int(row.n_pending) if hasattr(row, "n_pending") and pd.notna(row.n_pending) else 0,
             }
             feature_definitions[str(row.feature_id)] = {"label": str(row.feature_id).replace("_", " ").upper(), "definition": "" if pd.isna(row.definition) else str(row.definition), "category": "" if pd.isna(row.category) else str(row.category)}
     catalog, profiles = load_feature_catalog(ROOT / "configs/features.yaml", ROOT / "configs/feature_profiles.yaml", allow_provisional=True)
