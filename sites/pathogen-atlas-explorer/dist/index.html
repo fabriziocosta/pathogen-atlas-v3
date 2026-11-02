@@ -75,7 +75,7 @@
   </div>
 </main>
 <script>
-let DATA, selected=null, evidenceCache={}, positiveFeaturesByGroup={};
+let DATA, selected=null, evidenceCache={}, positiveFeaturesByGroup={}, featureEvidenceRequest=0;
 const fmt=n=>Number(n||0).toLocaleString();
 function activeFeatureIds(group){return (DATA.feature_profiles?.[group]||[]).filter(id=>positiveFeaturesByGroup[group]?.has(id))}
 function updateGroupMetrics(){const group=document.getElementById('group').value,rows=DATA.species.filter(s=>s.organism_group===group),featureCount=activeFeatureIds(group).length,accepted=rows.reduce((n,s)=>n+Number(s.n_jev_accepted_pmids||0),0),searched=rows.reduce((n,s)=>n+Number(s.n_pubmed_search_records||0),0);document.getElementById('nfeatures').textContent=fmt(featureCount);document.getElementById('nspecies').textContent=fmt(rows.length);document.getElementById('nevidence').textContent=fmt(accepted);document.getElementById('nsearch').textContent=fmt(searched);updateVisibleCount(rows.length)}
@@ -161,7 +161,7 @@ function render(){
  const map=document.getElementById('map'),config={responsive:true,displaylogo:false};if(map._fullLayout){Plotly.react(map,traces,layout,config)}else{if(map.classList.contains('js-plotly-plot'))Plotly.purge(map);map.innerHTML='';Plotly.newPlot(map,traces,layout,config)}
  document.getElementById('map').on('plotly_click',ev=>{const oid=ev.points[0].customdata[0];const species=DATA.species.find(s=>s.organism_id===oid);if(species)showProfile(species)});
 }
-async function showProfile(s){selected=s; const el=document.getElementById('profile'); const taxonomy=(s.taxonomy_path||'').split(';').filter(Boolean).map(x=>{const a=x.split('=');return `<dt>${a[0][0].toUpperCase()+a[0].slice(1)}</dt><dd>${a.slice(1).join('=')}</dd>`}).join('');
+async function showProfile(s){selected=s;featureEvidenceRequest++; const el=document.getElementById('profile'); const taxonomy=(s.taxonomy_path||'').split(';').filter(Boolean).map(x=>{const a=x.split('=');return `<dt>${a[0][0].toUpperCase()+a[0].slice(1)}</dt><dd>${a.slice(1).join('=')}</dd>`}).join('');
  const synonyms=(s.synonyms||[]).map(name=>`<li>${name}</li>`).join('')||'<li class="synonyms-empty">No synonyms recorded</li>';
  const applicable=new Set(activeFeatureIds(s.organism_group));
  const renderFeature=(id)=>{const v=(s.feature_values||{})[id],count=(s.feature_counts||{})[id],f=DATA.features[id]||{},nYes=Number(count?.n_yes||0),nScored=Number(count?.n_scored||0),nExpected=Number(count?.n_expected??s.n_jev_accepted_pmids??0),nFailed=Number(count?.n_failed||0),nPending=Number(count?.n_pending||0),nOther=Math.max(0,nExpected-nScored-nFailed-nPending),percent=v==null?'—':`${Math.round(v*100)}%`,answerCount=nExpected?`${fmt(nYes)} yes · ${fmt(nScored)}/${fmt(nExpected)} scored${nFailed?` · ${fmt(nFailed)} failed`:''}${nPending?` · ${fmt(nPending)} pending`:''}${nOther?` · ${fmt(nOther)} incomplete`:''}`:'Not scored';return `<button type="button" class="feature" data-feature="${id}" aria-pressed="${document.getElementById('color').value===id}" title="${f.question||f.definition||''}"><span class="expert-question-head"><span class="expert-question-label">${f.label||id}</span><span class="expert-question-value">${percent}</span></span><span class="expert-question-track"><span class="expert-question-fill" style="width:${Math.max(0,Math.min(100,(v||0)*100))}%"></span></span><span class="expert-answer-count">${answerCount}</span></button>`};
@@ -173,8 +173,11 @@ async function showProfile(s){selected=s; const el=document.getElementById('prof
  const featureSort=document.getElementById('feature-sort');featureSort.onchange=()=>{const active=el.querySelector('.feature[aria-pressed="true"]');if(active)showFeatureEvidence(s,active.dataset.feature)};
  const target=document.getElementById('pmids'); if(!s.evidence_file){target.textContent='No completed Jev assessments are available.';document.getElementById('feature-pmids').textContent='No completed Jev assessments are available.';return}try{let data=evidenceCache[s.evidence_file];if(!data){data=await(await fetch(s.evidence_file)).json();evidenceCache[s.evidence_file]=data}const draw=()=>{const sort=document.getElementById('sort-pmids').value;const sorted=[...data].sort((a,b)=>sort==='confidence'?Number(b.p_yes||0)-Number(a.p_yes||0):String(b.publication_date||'').localeCompare(String(a.publication_date||'')));target.innerHTML=sorted.map(x=>`<div class="pmid"><span><a href="https://pubmed.ncbi.nlm.nih.gov/${x.pmid}/" target="_blank" rel="noopener">PMID ${x.pmid}</a> ${x.title||''}${x.candidate_pathogen_evidence?' <b>· accepted evidence</b>':''}</span><span>Jev P(yes): ${Number(x.p_yes||0).toFixed(2)}</span></div>`).join('')||'No completed Jev assessments are available.'};draw();document.getElementById('sort-pmids').onchange=draw}catch(e){target.textContent='Evidence shard could not be loaded.'}
 }
-function showFeatureEvidence(s,id){
- const target=document.getElementById('feature-pmids'),f=DATA.features[id]||{},counts=(s.feature_counts||{})[id]||{},data=s.evidence_file?evidenceCache[s.evidence_file]||[]:[];
+async function showFeatureEvidence(s,id){
+ const request=++featureEvidenceRequest,target=document.getElementById('feature-pmids'),f=DATA.features[id]||{},counts=(s.feature_counts||{})[id]||{};
+ let data=s.evidence_file?evidenceCache[s.evidence_file]:[];
+ if(s.evidence_file&&!data){target.textContent='Loading supporting abstracts…';document.getElementById('selected-feature-count').textContent='Loading…';try{const response=await fetch(s.evidence_file);if(!response.ok)throw new Error(`HTTP ${response.status}`);data=await response.json();evidenceCache[s.evidence_file]=data}catch(e){if(request===featureEvidenceRequest){target.textContent='Feature evidence could not be loaded.';document.getElementById('selected-feature-count').textContent='Unavailable'}return}}
+ if(request!==featureEvidenceRequest||selected!==s)return;
  const rows=data.filter(x=>x.accepted_pathogen_evidence&&(x.feature_ids_yes||[]).includes(id));
  const detail=document.getElementById('feature-detail');detail.hidden=false;
  const hierarchy=(DATA.feature_hierarchy||[]).find(d=>(d.categories||[]).some(c=>(c.feature_ids||[]).includes(id)));
